@@ -1,5 +1,5 @@
 use ratatui::{
-    layout::{Constraint, Direction, Layout, Rect},
+    layout::{Alignment, Constraint, Direction, Layout, Rect},
     style::{Color, Modifier, Style},
     text::{Line, Span},
     widgets::{Block, Borders, Paragraph},
@@ -25,11 +25,29 @@ pub fn render_current_weather(
     let inner = block.inner(area);
     frame.render_widget(block, area);
 
+    // Calculate content height to center vertically
+    let content_height = 11; // icon (5) + blank + temp + feels + blank + condition = 10 lines for left side
+    let vertical_padding = (inner.height as usize).saturating_sub(content_height) / 2;
+
+    // Create a centered area
+    let centered_area = if vertical_padding > 0 {
+        Layout::default()
+            .direction(Direction::Vertical)
+            .constraints([
+                Constraint::Length(vertical_padding as u16),
+                Constraint::Min(content_height as u16),
+                Constraint::Length(vertical_padding as u16),
+            ])
+            .split(inner)[1]
+    } else {
+        inner
+    };
+
     // Split into left (icon + main temp) and right (details)
     let chunks = Layout::default()
         .direction(Direction::Horizontal)
         .constraints([Constraint::Length(20), Constraint::Min(30)])
-        .split(inner);
+        .split(centered_area);
 
     render_icon_and_temp(frame, chunks[0], weather, units);
     render_details(frame, chunks[1], weather, units);
@@ -50,7 +68,7 @@ fn render_icon_and_temp(
 
     let mut lines = Vec::new();
 
-    // Add icon lines
+    // Add icon lines (centered)
     for line in icon.iter() {
         lines.push(Line::from(Span::styled(
             *line,
@@ -84,7 +102,7 @@ fn render_icon_and_temp(
         Style::default().fg(icon_color),
     )));
 
-    let paragraph = Paragraph::new(lines);
+    let paragraph = Paragraph::new(lines).alignment(Alignment::Center);
     frame.render_widget(paragraph, area);
 }
 
