@@ -27,6 +27,8 @@ pub struct UnitsConfig {
     pub wind_speed: WindSpeedUnit,
     #[serde(default = "default_precipitation")]
     pub precipitation: PrecipitationUnit,
+    #[serde(default = "default_pressure")]
+    pub pressure: PressureUnit,
 }
 
 impl Default for UnitsConfig {
@@ -35,6 +37,7 @@ impl Default for UnitsConfig {
             temperature: TemperatureUnit::Fahrenheit,
             wind_speed: WindSpeedUnit::Mph,
             precipitation: PrecipitationUnit::Inch,
+            pressure: PressureUnit::InHg,
         }
     }
 }
@@ -49,6 +52,10 @@ fn default_wind_speed() -> WindSpeedUnit {
 
 fn default_precipitation() -> PrecipitationUnit {
     PrecipitationUnit::Inch
+}
+
+fn default_pressure() -> PressureUnit {
+    PressureUnit::InHg
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
@@ -122,6 +129,41 @@ impl PrecipitationUnit {
         match self {
             Self::Inch => "inch",
             Self::Mm => "mm",
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "lowercase")]
+pub enum PressureUnit {
+    #[serde(alias = "hpa")]
+    Hpa,
+    #[serde(alias = "inhg")]
+    InHg,
+}
+
+impl PressureUnit {
+    pub fn symbol(&self) -> &'static str {
+        match self {
+            Self::Hpa => "hPa",
+            Self::InHg => "inHg",
+        }
+    }
+
+    /// Convert from hPa (API always returns hPa) to the selected unit
+    pub fn convert_from_hpa(&self, hpa: f64) -> f64 {
+        match self {
+            Self::Hpa => hpa,
+            Self::InHg => hpa * 0.02953,
+        }
+    }
+
+    /// Format pressure value with appropriate decimal places
+    pub fn format(&self, hpa: f64) -> String {
+        let value = self.convert_from_hpa(hpa);
+        match self {
+            Self::Hpa => format!("{:.0}", value),
+            Self::InHg => format!("{:.2}", value),
         }
     }
 }

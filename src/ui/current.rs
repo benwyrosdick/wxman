@@ -125,7 +125,7 @@ fn render_details(frame: &mut Frame, area: Rect, weather: &CurrentWeather, units
         Line::from(vec![
             Span::styled("Pressure:    ", Style::default().fg(Color::DarkGray)),
             Span::styled(
-                format!("{:.0} hPa", weather.pressure),
+                format!("{} {}", units.pressure.format(weather.pressure), units.pressure.symbol()),
                 Style::default().fg(Color::LightMagenta),
             ),
         ]),

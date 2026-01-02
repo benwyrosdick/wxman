@@ -2,7 +2,7 @@ use anyhow::Result;
 use chrono::{DateTime, Local};
 
 use crate::api;
-use crate::config::{Config, PrecipitationUnit, TemperatureUnit, WindSpeedUnit};
+use crate::config::{Config, PrecipitationUnit, PressureUnit, TemperatureUnit, WindSpeedUnit};
 use crate::models::{Location, WeatherData};
 use crate::ui::hourly::get_max_hourly_scroll;
 
@@ -17,6 +17,7 @@ pub enum UnitMenuField {
     Temperature,
     WindSpeed,
     Precipitation,
+    Pressure,
 }
 
 pub struct App {
@@ -108,9 +109,10 @@ impl App {
 
     pub fn units_menu_up(&mut self) {
         self.units_menu_selection = match self.units_menu_selection {
-            UnitMenuField::Temperature => UnitMenuField::Precipitation,
+            UnitMenuField::Temperature => UnitMenuField::Pressure,
             UnitMenuField::WindSpeed => UnitMenuField::Temperature,
             UnitMenuField::Precipitation => UnitMenuField::WindSpeed,
+            UnitMenuField::Pressure => UnitMenuField::Precipitation,
         };
     }
 
@@ -118,7 +120,8 @@ impl App {
         self.units_menu_selection = match self.units_menu_selection {
             UnitMenuField::Temperature => UnitMenuField::WindSpeed,
             UnitMenuField::WindSpeed => UnitMenuField::Precipitation,
-            UnitMenuField::Precipitation => UnitMenuField::Temperature,
+            UnitMenuField::Precipitation => UnitMenuField::Pressure,
+            UnitMenuField::Pressure => UnitMenuField::Temperature,
         };
     }
 
@@ -143,6 +146,12 @@ impl App {
                 self.config.units.precipitation = match self.config.units.precipitation {
                     PrecipitationUnit::Inch => PrecipitationUnit::Mm,
                     PrecipitationUnit::Mm => PrecipitationUnit::Inch,
+                };
+            }
+            UnitMenuField::Pressure => {
+                self.config.units.pressure = match self.config.units.pressure {
+                    PressureUnit::Hpa => PressureUnit::InHg,
+                    PressureUnit::InHg => PressureUnit::Hpa,
                 };
             }
         }

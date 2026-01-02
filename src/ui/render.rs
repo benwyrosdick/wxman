@@ -238,7 +238,7 @@ fn render_help_overlay(frame: &mut Frame, area: Rect) {
 fn render_units_menu(frame: &mut Frame, area: Rect, app: &App) {
     // Center the menu box
     let popup_width = 45;
-    let popup_height = 12;
+    let popup_height = 14;
     let popup_x = (area.width.saturating_sub(popup_width)) / 2;
     let popup_y = (area.height.saturating_sub(popup_height)) / 2;
 
@@ -273,6 +273,7 @@ fn render_units_menu(frame: &mut Frame, area: Rect, app: &App) {
     let temp_value = app.config.units.temperature.symbol();
     let wind_value = app.config.units.wind_speed.symbol();
     let precip_value = app.config.units.precipitation.symbol();
+    let pressure_value = app.config.units.pressure.symbol();
 
     let menu_text = vec![
         Line::from(""),
@@ -286,6 +287,8 @@ fn render_units_menu(frame: &mut Frame, area: Rect, app: &App) {
         make_row("Wind Speed", wind_value, selected == UnitMenuField::WindSpeed),
         Line::from(""),
         make_row("Precipitation", precip_value, selected == UnitMenuField::Precipitation),
+        Line::from(""),
+        make_row("Pressure", pressure_value, selected == UnitMenuField::Pressure),
         Line::from(""),
         Line::from(Span::styled(
             "  Press u or Esc to close and apply",
