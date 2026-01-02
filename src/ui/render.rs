@@ -54,7 +54,7 @@ fn render_header(frame: &mut Frame, area: Rect, app: &App) {
         .map(|t| t.format("%l:%M %p").to_string())
         .unwrap_or_default();
 
-    let title = format!(" wxman - {} ", location_str);
+    let title = format!(" WxMan - {} ", location_str);
 
     let header = Paragraph::new(Line::from(vec![
         Span::styled(

@@ -2,7 +2,7 @@
 
 A terminal-based weather application built with Rust and [Ratatui](https://ratatui.rs/).
 
-![wxman screenshot](https://via.placeholder.com/800x500?text=wxman+weather+TUI)
+![wxman screenshot](screenshot.png)
 
 ## Features
 
