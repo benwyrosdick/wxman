@@ -7,6 +7,7 @@ use ratatui::{
 };
 
 use crate::app::{App, AppState, UnitMenuField};
+use crate::ui::chart::render_today_chart;
 use crate::ui::current::render_current_weather;
 use crate::ui::daily::render_daily_forecast;
 use crate::ui::hourly::render_hourly_forecast;
@@ -88,33 +89,47 @@ fn render_main_content(frame: &mut Frame, area: Rect, app: &App) {
         }
         AppState::Ready => {
             if let Some(weather) = &app.weather {
-                // Split into top and bottom sections
-                let chunks = Layout::default()
+                // Split into top section and bottom (5-day forecast full width)
+                let main_rows = Layout::default()
                     .direction(Direction::Vertical)
                     .constraints([
-                        Constraint::Min(15),   // Current + Hourly
-                        Constraint::Length(18), // Daily forecast
+                        Constraint::Min(20),     // Top: Current + Chart + Hourly
+                        Constraint::Length(16),  // Bottom: 5-Day forecast (full width)
                     ])
                     .split(area);
 
-                // Split top section into Current and Hourly
-                let top_chunks = Layout::default()
+                // Split top section into left (Current + Chart) and right (Hourly)
+                let top_columns = Layout::default()
                     .direction(Direction::Horizontal)
                     .constraints([
-                        Constraint::Percentage(55), // Current weather
-                        Constraint::Percentage(45), // Hourly forecast
+                        Constraint::Percentage(55), // Left: Current + Chart
+                        Constraint::Percentage(45), // Right: Hourly
                     ])
-                    .split(chunks[0]);
+                    .split(main_rows[0]);
 
-                render_current_weather(frame, top_chunks[0], &weather.current, &app.config.units);
+                // Split left column into Current and Chart
+                let left_chunks = Layout::default()
+                    .direction(Direction::Vertical)
+                    .constraints([
+                        Constraint::Min(15),     // Current conditions (fills remaining space)
+                        Constraint::Length(12),  // Today's chart (fixed height)
+                    ])
+                    .split(top_columns[0]);
+
+                render_current_weather(frame, left_chunks[0], &weather.current, &app.config.units);
+                render_today_chart(frame, left_chunks[1], &weather.hourly, &app.config.units);
+                
+                // Hourly takes the full right column of top section
                 render_hourly_forecast(
                     frame,
-                    top_chunks[1],
+                    top_columns[1],
                     &weather.hourly,
                     &app.config.units,
                     app.hourly_scroll,
                 );
-                render_daily_forecast(frame, chunks[1], &weather.daily, &app.config.units);
+
+                // 5-Day forecast at bottom, full width
+                render_daily_forecast(frame, main_rows[1], &weather.daily, &app.config.units);
             }
         }
     }
