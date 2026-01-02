@@ -31,6 +31,9 @@ pub struct App {
     pub show_units_menu: bool,
     pub units_menu_selection: UnitMenuField,
     pub units_changed: bool,
+    pub show_location_input: bool,
+    pub location_input: String,
+    pub location_error: Option<String>,
     pub should_quit: bool,
 }
 
@@ -47,6 +50,9 @@ impl App {
             show_units_menu: false,
             units_menu_selection: UnitMenuField::Temperature,
             units_changed: false,
+            show_location_input: false,
+            location_input: String::new(),
+            location_error: None,
             should_quit: false,
         }
     }
@@ -191,5 +197,60 @@ impl App {
 
     pub fn set_error(&mut self, message: String) {
         self.state = AppState::Error(message);
+    }
+
+    pub fn open_location_input(&mut self) {
+        self.show_location_input = true;
+        self.location_input = self.config.location.zipcode.clone().unwrap_or_default();
+        self.location_error = None;
+    }
+
+    pub fn close_location_input(&mut self) {
+        self.show_location_input = false;
+        self.location_input.clear();
+        self.location_error = None;
+    }
+
+    pub fn location_input_char(&mut self, c: char) {
+        self.location_input.push(c);
+        self.location_error = None;
+    }
+
+    pub fn location_input_backspace(&mut self) {
+        self.location_input.pop();
+        self.location_error = None;
+    }
+
+    pub async fn submit_location(&mut self) -> Result<bool> {
+        let input = self.location_input.trim().to_string();
+        
+        if input.is_empty() {
+            // Clear zipcode, use IP geolocation
+            self.config.location.zipcode = None;
+            self.config.location.latitude = None;
+            self.config.location.longitude = None;
+            self.config.location.city = None;
+            self.config.save()?;
+            self.close_location_input();
+            return Ok(true); // Reload weather
+        }
+
+        // Try to look up the location
+        match api::lookup_zipcode(&input).await {
+            Ok(location) => {
+                // Save to config
+                self.config.location.zipcode = Some(input);
+                self.config.location.latitude = Some(location.latitude);
+                self.config.location.longitude = Some(location.longitude);
+                self.config.location.city = Some(location.city);
+                self.config.save()?;
+                self.close_location_input();
+                Ok(true) // Reload weather
+            }
+            Err(e) => {
+                self.location_error = Some(format!("Not found: {}", e));
+                Ok(false) // Don't reload
+            }
+        }
     }
 }

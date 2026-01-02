@@ -113,23 +113,23 @@ fn render_day_column(
 
     lines.push(Line::from(""));
 
-    // High/Low temperature
+    // Low/High temperature
     let temp_line = format!(
         "{}° / {}°",
-        day.temp_max as i32,
-        day.temp_min as i32
+        day.temp_min as i32,
+        day.temp_max as i32
     );
     let padding = (area.width as usize).saturating_sub(temp_line.len()) / 2;
     lines.push(Line::from(vec![
         Span::raw(format!("{:>padding$}", "", padding = padding)),
         Span::styled(
-            format!("{}°", day.temp_max as i32),
-            Style::default().fg(high_color).add_modifier(Modifier::BOLD),
+            format!("{}°", day.temp_min as i32),
+            Style::default().fg(low_color),
         ),
         Span::styled(" / ", Style::default().fg(Color::DarkGray)),
         Span::styled(
-            format!("{}°", day.temp_min as i32),
-            Style::default().fg(low_color),
+            format!("{}°", day.temp_max as i32),
+            Style::default().fg(high_color).add_modifier(Modifier::BOLD),
         ),
     ]));
 

@@ -116,6 +116,41 @@ async fn run_app<B: ratatui::backend::Backend>(
                         continue;
                     }
 
+                    // If location input is showing, handle text input
+                    if app.show_location_input {
+                        match key.code {
+                            KeyCode::Esc => {
+                                app.close_location_input();
+                            }
+                            KeyCode::Enter => {
+                                match app.submit_location().await {
+                                    Ok(true) => {
+                                        // Location changed, reload weather
+                                        if let Err(e) = app.load_weather().await {
+                                            app.set_error(e.to_string());
+                                        }
+                                        last_refresh = Instant::now();
+                                    }
+                                    Ok(false) => {
+                                        // Error shown in popup, don't close
+                                    }
+                                    Err(e) => {
+                                        app.set_error(e.to_string());
+                                        app.close_location_input();
+                                    }
+                                }
+                            }
+                            KeyCode::Backspace => {
+                                app.location_input_backspace();
+                            }
+                            KeyCode::Char(c) => {
+                                app.location_input_char(c);
+                            }
+                            _ => {}
+                        }
+                        continue;
+                    }
+
                     match key.code {
                         KeyCode::Char('q') | KeyCode::Esc => {
                             app.should_quit = true;
@@ -128,6 +163,9 @@ async fn run_app<B: ratatui::backend::Backend>(
                         }
                         KeyCode::Char('u') => {
                             app.toggle_units_menu();
+                        }
+                        KeyCode::Char('l') => {
+                            app.open_location_input();
                         }
                         KeyCode::Up | KeyCode::Char('k') => {
                             app.scroll_hourly_up();

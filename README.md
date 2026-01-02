@@ -50,10 +50,20 @@ wxman
 |-----|--------|
 | `q` / `Esc` | Quit |
 | `r` | Refresh weather data |
+| `l` | Set location |
 | `u` | Open units menu |
 | `↑` / `k` | Scroll hourly forecast up |
 | `↓` / `j` | Scroll hourly forecast down |
 | `?` | Show help |
+
+### Location
+
+Press `l` to open the location input dialog. You can enter:
+- A **city name** (e.g., "New York")
+- A **zip code** (e.g., "90210")
+- Leave **empty** to use automatic IP-based geolocation
+
+The location is saved to your config file and persists between sessions.
 
 ### Units Menu
 

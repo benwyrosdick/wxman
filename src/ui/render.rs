@@ -36,6 +36,10 @@ pub fn render(frame: &mut Frame, app: &App) {
     if app.show_units_menu {
         render_units_menu(frame, size, app);
     }
+
+    if app.show_location_input {
+        render_location_input(frame, size, app);
+    }
 }
 
 fn render_header(frame: &mut Frame, area: Rect, app: &App) {
@@ -167,10 +171,12 @@ fn render_footer(frame: &mut Frame, area: Rect, app: &App) {
         Span::raw(" Quit  "),
         Span::styled("r", Style::default().fg(Color::Yellow)),
         Span::raw(" Refresh  "),
+        Span::styled("l", Style::default().fg(Color::Yellow)),
+        Span::raw(" Location  "),
         Span::styled("u", Style::default().fg(Color::Yellow)),
         Span::raw(format!(" Units ({})  ", unit_str)),
         Span::styled("↑↓", Style::default().fg(Color::Yellow)),
-        Span::raw(" Scroll Hourly  "),
+        Span::raw(" Scroll  "),
         Span::styled("?", Style::default().fg(Color::Yellow)),
         Span::raw(" Help"),
     ]))
@@ -182,7 +188,7 @@ fn render_footer(frame: &mut Frame, area: Rect, app: &App) {
 fn render_help_overlay(frame: &mut Frame, area: Rect) {
     // Center the help box
     let popup_width = 50;
-    let popup_height = 14;
+    let popup_height = 16;
     let popup_x = (area.width.saturating_sub(popup_width)) / 2;
     let popup_y = (area.height.saturating_sub(popup_height)) / 2;
 
@@ -202,8 +208,12 @@ fn render_help_overlay(frame: &mut Frame, area: Rect) {
             Span::raw("           Refresh weather data"),
         ]),
         Line::from(vec![
+            Span::styled("  l", Style::default().fg(Color::Yellow)),
+            Span::raw("           Set location"),
+        ]),
+        Line::from(vec![
             Span::styled("  u", Style::default().fg(Color::Yellow)),
-            Span::raw("           Toggle temperature units"),
+            Span::raw("           Configure units"),
         ]),
         Line::from(vec![
             Span::styled("  ↑ / k", Style::default().fg(Color::Yellow)),
@@ -305,4 +315,75 @@ fn render_units_menu(frame: &mut Frame, area: Rect, app: &App) {
     );
 
     frame.render_widget(menu, popup_area);
+}
+
+fn render_location_input(frame: &mut Frame, area: Rect, app: &App) {
+    // Center the input box
+    let popup_width = 50;
+    let popup_height = 10;
+    let popup_x = (area.width.saturating_sub(popup_width)) / 2;
+    let popup_y = (area.height.saturating_sub(popup_height)) / 2;
+
+    let popup_area = Rect::new(popup_x, popup_y, popup_width, popup_height);
+
+    // Clear the area behind the popup
+    frame.render_widget(Clear, popup_area);
+
+    let current_location = app
+        .location
+        .as_ref()
+        .map(|l| l.display_name())
+        .unwrap_or_else(|| "Unknown".to_string());
+
+    let input_display = format!("{}_", app.location_input);
+
+    let mut lines = vec![
+        Line::from(""),
+        Line::from(vec![
+            Span::styled("  Current: ", Style::default().fg(Color::DarkGray)),
+            Span::styled(current_location, Style::default().fg(Color::White)),
+        ]),
+        Line::from(""),
+        Line::from(vec![
+            Span::styled("  Enter city or zip code:", Style::default().fg(Color::Gray)),
+        ]),
+        Line::from(vec![
+            Span::raw("  "),
+            Span::styled(
+                input_display,
+                Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD),
+            ),
+        ]),
+    ];
+
+    // Show error if any
+    if let Some(error) = &app.location_error {
+        lines.push(Line::from(""));
+        lines.push(Line::from(Span::styled(
+            format!("  {}", error),
+            Style::default().fg(Color::Red),
+        )));
+    } else {
+        lines.push(Line::from(""));
+        lines.push(Line::from(Span::styled(
+            "  Leave empty for auto-detect (IP)",
+            Style::default().fg(Color::DarkGray),
+        )));
+    }
+
+    lines.push(Line::from(""));
+    lines.push(Line::from(Span::styled(
+        "  Enter to confirm, Esc to cancel",
+        Style::default().fg(Color::DarkGray),
+    )));
+
+    let input = Paragraph::new(lines).block(
+        Block::default()
+            .title(" Set Location ")
+            .title_style(Style::default().fg(Color::Green).add_modifier(Modifier::BOLD))
+            .borders(Borders::ALL)
+            .border_style(Style::default().fg(Color::Green)),
+    );
+
+    frame.render_widget(input, popup_area);
 }
