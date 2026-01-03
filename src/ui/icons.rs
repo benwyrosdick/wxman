@@ -184,19 +184,19 @@ impl WeatherCondition {
     /// Returns a small icon (single character or short string)
     pub fn small_icon(&self) -> &'static str {
         match self {
-            Self::ClearDay => "☀",
-            Self::ClearNight => "☾",
-            Self::PartlyCloudyDay => "⛅",
-            Self::PartlyCloudyNight => "☁",
-            Self::Overcast => "☁",
-            Self::Fog => "🌫",
-            Self::Drizzle => "🌧",
-            Self::Rain => "🌧",
-            Self::HeavyRain => "🌧",
-            Self::Snow => "❄",
-            Self::HeavySnow => "❄",
-            Self::Thunderstorm => "⛈",
-            Self::Unknown => "?",
+            Self::ClearDay => "☀️",
+            Self::ClearNight => "🌙",
+            Self::PartlyCloudyDay => "🌤️",
+            Self::PartlyCloudyNight => "☁️",
+            Self::Overcast => "☁️",
+            Self::Fog => "🌫️",
+            Self::Drizzle => "🌧️",
+            Self::Rain => "🌧️",
+            Self::HeavyRain => "🌧️",
+            Self::Snow => "❄️",
+            Self::HeavySnow => "❄️",
+            Self::Thunderstorm => "🌩️",
+            Self::Unknown => "❓",
         }
     }
 }
