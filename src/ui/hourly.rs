@@ -8,7 +8,7 @@ use ratatui::{
 
 use crate::config::UnitsConfig;
 use crate::models::HourlyForecast;
-use crate::ui::icons::{temperature_color, WeatherCondition};
+use crate::ui::icons::{temperature_color_celsius, WeatherCondition};
 use chrono::{DateTime, Datelike, Local, NaiveDateTime, TimeZone, Timelike};
 
 pub fn render_hourly_forecast(
@@ -86,7 +86,7 @@ pub fn render_hourly_forecast(
     // Determine if first visible row should show date
     if let Some(first_hour) = future_hours.get(scroll_offset) {
         if let Ok(dt) = NaiveDateTime::parse_from_str(&first_hour.time, "%Y-%m-%dT%H:%M") {
-            let local_dt: DateTime<Local> = Local.from_local_datetime(&dt).single().unwrap_or_else(|| Local::now());
+            let local_dt: DateTime<Local> = Local.from_local_datetime(&dt).single().unwrap_or_else(Local::now);
             last_date = Some((local_dt.year(), local_dt.month(), local_dt.day()));
         }
     }
@@ -123,9 +123,8 @@ pub fn render_hourly_forecast(
         
         // Convert temperature from Celsius to user's preferred unit
         let temp = units.temperature.convert(hour.temperature);
-        // temperature_color expects Fahrenheit for color mapping
-        let temp_f = hour.temperature * 9.0 / 5.0 + 32.0;
-        let temp_color = temperature_color(temp_f, true);
+        // Get color based on raw Celsius value
+        let temp_color = temperature_color_celsius(hour.temperature);
 
         // Color precipitation probability
         let precip_color = match hour.precipitation_probability {

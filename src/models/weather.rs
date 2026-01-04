@@ -53,14 +53,14 @@ pub struct DailyForecast {
 }
 
 /// Raw API response from Open-Meteo
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 pub struct OpenMeteoResponse {
     pub current: OpenMeteoCurrent,
     pub hourly: OpenMeteoHourly,
     pub daily: OpenMeteoDaily,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 pub struct OpenMeteoCurrent {
     pub temperature_2m: f64,
     pub relative_humidity_2m: i32,
@@ -76,7 +76,7 @@ pub struct OpenMeteoCurrent {
     pub is_day: i32,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 pub struct OpenMeteoHourly {
     pub time: Vec<String>,
     pub temperature_2m: Vec<f64>,
@@ -86,7 +86,7 @@ pub struct OpenMeteoHourly {
     pub wind_speed_10m: Vec<f64>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 pub struct OpenMeteoDaily {
     pub time: Vec<String>,
     pub weather_code: Vec<i32>,
@@ -160,5 +160,179 @@ impl From<OpenMeteoResponse> for WeatherData {
             hourly,
             daily,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn create_test_response() -> OpenMeteoResponse {
+        OpenMeteoResponse {
+            current: OpenMeteoCurrent {
+                temperature_2m: 20.5,
+                relative_humidity_2m: 65,
+                apparent_temperature: 19.0,
+                precipitation: 0.5,
+                weather_code: 3,
+                wind_speed_10m: 15.0,
+                wind_direction_10m: 180,
+                wind_gusts_10m: 25.0,
+                cloud_cover: 75,
+                pressure_msl: 1013.25,
+                uv_index: 5.0,
+                is_day: 1,
+            },
+            hourly: OpenMeteoHourly {
+                time: vec![
+                    "2024-01-01T00:00".to_string(),
+                    "2024-01-01T01:00".to_string(),
+                    "2024-01-01T02:00".to_string(),
+                ],
+                temperature_2m: vec![18.0, 17.5, 17.0],
+                apparent_temperature: vec![16.0, 15.5, 15.0],
+                precipitation_probability: vec![10, 20, 30],
+                weather_code: vec![0, 1, 2],
+                wind_speed_10m: vec![10.0, 12.0, 14.0],
+            },
+            daily: OpenMeteoDaily {
+                time: vec!["2024-01-01".to_string(), "2024-01-02".to_string()],
+                weather_code: vec![3, 61],
+                temperature_2m_max: vec![22.0, 20.0],
+                temperature_2m_min: vec![15.0, 12.0],
+                apparent_temperature_max: vec![21.0, 19.0],
+                apparent_temperature_min: vec![14.0, 11.0],
+                sunrise: vec!["2024-01-01T07:00".to_string(), "2024-01-02T07:01".to_string()],
+                sunset: vec!["2024-01-01T17:00".to_string(), "2024-01-02T17:01".to_string()],
+                precipitation_sum: vec![0.0, 5.5],
+                precipitation_probability_max: vec![10, 80],
+                wind_speed_10m_max: vec![20.0, 35.0],
+                uv_index_max: vec![4.0, 2.0],
+            },
+        }
+    }
+
+    #[test]
+    fn test_current_weather_conversion() {
+        let response = create_test_response();
+        let weather_data: WeatherData = response.into();
+
+        assert_eq!(weather_data.current.temperature, 20.5);
+        assert_eq!(weather_data.current.humidity, 65);
+        assert_eq!(weather_data.current.apparent_temperature, 19.0);
+        assert_eq!(weather_data.current.weather_code, 3);
+        assert_eq!(weather_data.current.wind_speed, 15.0);
+        assert_eq!(weather_data.current.wind_direction, 180);
+        assert_eq!(weather_data.current.wind_gusts, 25.0);
+        assert_eq!(weather_data.current.cloud_cover, 75);
+        assert_eq!(weather_data.current.pressure, 1013.25);
+        assert_eq!(weather_data.current.precipitation, 0.5);
+        assert_eq!(weather_data.current.uv_index, 5.0);
+        assert!(weather_data.current.is_day);
+    }
+
+    #[test]
+    fn test_is_day_conversion() {
+        let mut response = create_test_response();
+        
+        // Test is_day = 1 (true)
+        response.current.is_day = 1;
+        let weather_data: WeatherData = response.clone().into();
+        assert!(weather_data.current.is_day);
+
+        // Test is_day = 0 (false)
+        response.current.is_day = 0;
+        let weather_data: WeatherData = response.into();
+        assert!(!weather_data.current.is_day);
+    }
+
+    #[test]
+    fn test_hourly_forecast_conversion() {
+        let response = create_test_response();
+        let weather_data: WeatherData = response.into();
+
+        assert_eq!(weather_data.hourly.len(), 3);
+
+        let first_hour = &weather_data.hourly[0];
+        assert_eq!(first_hour.time, "2024-01-01T00:00");
+        assert_eq!(first_hour.temperature, 18.0);
+        assert_eq!(first_hour.apparent_temperature, 16.0);
+        assert_eq!(first_hour.precipitation_probability, 10);
+        assert_eq!(first_hour.weather_code, 0);
+        assert_eq!(first_hour.wind_speed, 10.0);
+
+        let last_hour = &weather_data.hourly[2];
+        assert_eq!(last_hour.time, "2024-01-01T02:00");
+        assert_eq!(last_hour.temperature, 17.0);
+        assert_eq!(last_hour.precipitation_probability, 30);
+    }
+
+    #[test]
+    fn test_daily_forecast_conversion() {
+        let response = create_test_response();
+        let weather_data: WeatherData = response.into();
+
+        assert_eq!(weather_data.daily.len(), 2);
+
+        let first_day = &weather_data.daily[0];
+        assert_eq!(first_day.date, "2024-01-01");
+        assert_eq!(first_day.weather_code, 3);
+        assert_eq!(first_day.temp_max, 22.0);
+        assert_eq!(first_day.temp_min, 15.0);
+        assert_eq!(first_day.apparent_temp_max, 21.0);
+        assert_eq!(first_day.apparent_temp_min, 14.0);
+        assert_eq!(first_day.sunrise, "2024-01-01T07:00");
+        assert_eq!(first_day.sunset, "2024-01-01T17:00");
+        assert_eq!(first_day.precipitation_sum, 0.0);
+        assert_eq!(first_day.precipitation_probability, 10);
+        assert_eq!(first_day.wind_speed_max, 20.0);
+        assert_eq!(first_day.uv_index_max, 4.0);
+
+        let second_day = &weather_data.daily[1];
+        assert_eq!(second_day.date, "2024-01-02");
+        assert_eq!(second_day.weather_code, 61);
+        assert_eq!(second_day.precipitation_probability, 80);
+    }
+
+    #[test]
+    fn test_empty_hourly_data() {
+        let response = OpenMeteoResponse {
+            current: create_test_response().current,
+            hourly: OpenMeteoHourly {
+                time: vec![],
+                temperature_2m: vec![],
+                apparent_temperature: vec![],
+                precipitation_probability: vec![],
+                weather_code: vec![],
+                wind_speed_10m: vec![],
+            },
+            daily: create_test_response().daily,
+        };
+        let weather_data: WeatherData = response.into();
+        assert!(weather_data.hourly.is_empty());
+    }
+
+    #[test]
+    fn test_empty_daily_data() {
+        let response = OpenMeteoResponse {
+            current: create_test_response().current,
+            hourly: create_test_response().hourly,
+            daily: OpenMeteoDaily {
+                time: vec![],
+                weather_code: vec![],
+                temperature_2m_max: vec![],
+                temperature_2m_min: vec![],
+                apparent_temperature_max: vec![],
+                apparent_temperature_min: vec![],
+                sunrise: vec![],
+                sunset: vec![],
+                precipitation_sum: vec![],
+                precipitation_probability_max: vec![],
+                wind_speed_10m_max: vec![],
+                uv_index_max: vec![],
+            },
+        };
+        let weather_data: WeatherData = response.into();
+        assert!(weather_data.daily.is_empty());
     }
 }

@@ -176,10 +176,7 @@ fn render_error(frame: &mut Frame, area: Rect, message: &str) {
 }
 
 fn render_footer(frame: &mut Frame, area: Rect, app: &App) {
-    let unit_str = format!(
-        "{}",
-        app.config.units.temperature.symbol(),
-    );
+    let unit_str = app.config.units.temperature.symbol();
 
     let footer = Paragraph::new(Line::from(vec![
         Span::styled(" q", Style::default().fg(Color::Yellow)),
@@ -291,7 +288,7 @@ fn render_units_menu(frame: &mut Frame, area: Rect, app: &App) {
         Line::from(vec![
             Span::styled(prefix, style),
             Span::styled(format!("{:<15}", label), style),
-            Span::styled(format!("{}", value), value_style),
+            Span::styled(value.to_string(), value_style),
         ])
     };
 

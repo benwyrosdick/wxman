@@ -42,7 +42,7 @@ impl WeatherCondition {
             65 | 67 => Self::HeavyRain,
             71 | 73 | 77 => Self::Snow,
             75 | 85 | 86 => Self::HeavySnow,
-            80 | 81 | 82 => Self::Rain,
+            80..=82 => Self::Rain,
             95 | 96 | 99 => Self::Thunderstorm,
             _ => Self::Unknown,
         }
@@ -201,15 +201,15 @@ impl WeatherCondition {
     }
 }
 
-/// Get color for temperature display
-pub fn temperature_color(temp: f64, is_fahrenheit: bool) -> Color {
-    // Convert to Fahrenheit for consistent thresholds
-    let temp_f = if is_fahrenheit {
-        temp
-    } else {
-        temp * 9.0 / 5.0 + 32.0
-    };
+/// Get color for temperature display based on Celsius value.
+/// Uses Fahrenheit thresholds internally for consistent color mapping.
+pub fn temperature_color_celsius(temp_c: f64) -> Color {
+    let temp_f = temp_c * 9.0 / 5.0 + 32.0;
+    temperature_color_fahrenheit(temp_f)
+}
 
+/// Get color for temperature display based on Fahrenheit value
+pub fn temperature_color_fahrenheit(temp_f: f64) -> Color {
     match temp_f as i32 {
         ..=32 => Color::LightBlue,      // Freezing
         33..=50 => Color::Cyan,         // Cold
@@ -234,7 +234,9 @@ pub fn uv_info(uv_index: f64) -> (&'static str, Color) {
 
 /// Convert wind direction degrees to cardinal direction
 pub fn wind_direction_str(degrees: i32) -> &'static str {
-    match degrees {
+    // Normalize to 0-359 range
+    let normalized = degrees.rem_euclid(360);
+    match normalized {
         0..=22 => "N",
         23..=67 => "NE",
         68..=112 => "E",
@@ -243,6 +245,286 @@ pub fn wind_direction_str(degrees: i32) -> &'static str {
         203..=247 => "SW",
         248..=292 => "W",
         293..=337 => "NW",
-        _ => "N",
+        338..=359 => "N",
+        _ => "N", // Should never reach here after normalization
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    mod weather_condition {
+        use super::*;
+
+        #[test]
+        fn test_clear_day_night() {
+            assert!(matches!(
+                WeatherCondition::from_wmo_code(0, true),
+                WeatherCondition::ClearDay
+            ));
+            assert!(matches!(
+                WeatherCondition::from_wmo_code(0, false),
+                WeatherCondition::ClearNight
+            ));
+        }
+
+        #[test]
+        fn test_partly_cloudy() {
+            assert!(matches!(
+                WeatherCondition::from_wmo_code(1, true),
+                WeatherCondition::PartlyCloudyDay
+            ));
+            assert!(matches!(
+                WeatherCondition::from_wmo_code(2, false),
+                WeatherCondition::PartlyCloudyNight
+            ));
+        }
+
+        #[test]
+        fn test_overcast() {
+            assert!(matches!(
+                WeatherCondition::from_wmo_code(3, true),
+                WeatherCondition::Overcast
+            ));
+        }
+
+        #[test]
+        fn test_fog() {
+            assert!(matches!(
+                WeatherCondition::from_wmo_code(45, true),
+                WeatherCondition::Fog
+            ));
+            assert!(matches!(
+                WeatherCondition::from_wmo_code(48, true),
+                WeatherCondition::Fog
+            ));
+        }
+
+        #[test]
+        fn test_rain_codes() {
+            // Drizzle codes
+            for code in [51, 53, 55, 56, 57] {
+                assert!(matches!(
+                    WeatherCondition::from_wmo_code(code, true),
+                    WeatherCondition::Drizzle
+                ));
+            }
+            // Rain codes
+            for code in [61, 63, 66, 80, 81, 82] {
+                assert!(matches!(
+                    WeatherCondition::from_wmo_code(code, true),
+                    WeatherCondition::Rain
+                ));
+            }
+            // Heavy rain codes
+            for code in [65, 67] {
+                assert!(matches!(
+                    WeatherCondition::from_wmo_code(code, true),
+                    WeatherCondition::HeavyRain
+                ));
+            }
+        }
+
+        #[test]
+        fn test_snow_codes() {
+            for code in [71, 73, 77] {
+                assert!(matches!(
+                    WeatherCondition::from_wmo_code(code, true),
+                    WeatherCondition::Snow
+                ));
+            }
+            for code in [75, 85, 86] {
+                assert!(matches!(
+                    WeatherCondition::from_wmo_code(code, true),
+                    WeatherCondition::HeavySnow
+                ));
+            }
+        }
+
+        #[test]
+        fn test_thunderstorm() {
+            for code in [95, 96, 99] {
+                assert!(matches!(
+                    WeatherCondition::from_wmo_code(code, true),
+                    WeatherCondition::Thunderstorm
+                ));
+            }
+        }
+
+        #[test]
+        fn test_unknown_code() {
+            assert!(matches!(
+                WeatherCondition::from_wmo_code(999, true),
+                WeatherCondition::Unknown
+            ));
+        }
+
+        #[test]
+        fn test_description_not_empty() {
+            let conditions = [
+                WeatherCondition::ClearDay,
+                WeatherCondition::ClearNight,
+                WeatherCondition::Rain,
+                WeatherCondition::Snow,
+                WeatherCondition::Thunderstorm,
+            ];
+            for condition in conditions {
+                assert!(!condition.description().is_empty());
+            }
+        }
+
+        #[test]
+        fn test_icon_dimensions() {
+            let conditions = [
+                WeatherCondition::ClearDay,
+                WeatherCondition::Rain,
+                WeatherCondition::Snow,
+            ];
+            for condition in conditions {
+                let icon = condition.icon();
+                assert_eq!(icon.len(), 5, "Icon should have 5 lines");
+            }
+        }
+    }
+
+    mod temperature_color {
+        use super::*;
+
+        #[test]
+        fn test_freezing() {
+            // 0°C = 32°F (freezing)
+            assert_eq!(temperature_color_celsius(0.0), Color::LightBlue);
+            // -10°C = 14°F (freezing)
+            assert_eq!(temperature_color_celsius(-10.0), Color::LightBlue);
+        }
+
+        #[test]
+        fn test_cold() {
+            // 5°C = 41°F (cold)
+            assert_eq!(temperature_color_celsius(5.0), Color::Cyan);
+        }
+
+        #[test]
+        fn test_cool() {
+            // 15°C = 59°F (cool)
+            assert_eq!(temperature_color_celsius(15.0), Color::Green);
+        }
+
+        #[test]
+        fn test_comfortable() {
+            // 22°C ≈ 72°F (comfortable)
+            assert_eq!(temperature_color_celsius(22.0), Color::LightGreen);
+        }
+
+        #[test]
+        fn test_warm() {
+            // 27°C ≈ 80°F (warm)
+            assert_eq!(temperature_color_celsius(27.0), Color::Yellow);
+        }
+
+        #[test]
+        fn test_hot() {
+            // 32°C ≈ 90°F (hot)
+            assert_eq!(temperature_color_celsius(32.0), Color::Rgb(255, 165, 0));
+        }
+
+        #[test]
+        fn test_very_hot() {
+            // 38°C ≈ 100°F (very hot)
+            assert_eq!(temperature_color_celsius(38.0), Color::Red);
+        }
+
+        #[test]
+        fn test_fahrenheit_function() {
+            assert_eq!(temperature_color_fahrenheit(32.0), Color::LightBlue);
+            assert_eq!(temperature_color_fahrenheit(70.0), Color::LightGreen);
+            assert_eq!(temperature_color_fahrenheit(100.0), Color::Red);
+        }
+    }
+
+    mod uv_info_tests {
+        use super::*;
+
+        #[test]
+        fn test_low_uv() {
+            let (desc, color) = uv_info(1.0);
+            assert_eq!(desc, "Low");
+            assert_eq!(color, Color::Green);
+        }
+
+        #[test]
+        fn test_moderate_uv() {
+            let (desc, color) = uv_info(4.0);
+            assert_eq!(desc, "Moderate");
+            assert_eq!(color, Color::Yellow);
+        }
+
+        #[test]
+        fn test_high_uv() {
+            let (desc, color) = uv_info(7.0);
+            assert_eq!(desc, "High");
+            assert_eq!(color, Color::Rgb(255, 165, 0));
+        }
+
+        #[test]
+        fn test_very_high_uv() {
+            let (desc, color) = uv_info(9.0);
+            assert_eq!(desc, "Very High");
+            assert_eq!(color, Color::Red);
+        }
+
+        #[test]
+        fn test_extreme_uv() {
+            let (desc, color) = uv_info(12.0);
+            assert_eq!(desc, "Extreme");
+            assert_eq!(color, Color::Magenta);
+        }
+    }
+
+    mod wind_direction {
+        use super::*;
+
+        #[test]
+        fn test_cardinal_directions() {
+            assert_eq!(wind_direction_str(0), "N");
+            assert_eq!(wind_direction_str(45), "NE");
+            assert_eq!(wind_direction_str(90), "E");
+            assert_eq!(wind_direction_str(135), "SE");
+            assert_eq!(wind_direction_str(180), "S");
+            assert_eq!(wind_direction_str(225), "SW");
+            assert_eq!(wind_direction_str(270), "W");
+            assert_eq!(wind_direction_str(315), "NW");
+        }
+
+        #[test]
+        fn test_boundary_values() {
+            assert_eq!(wind_direction_str(22), "N");
+            assert_eq!(wind_direction_str(23), "NE");
+            assert_eq!(wind_direction_str(337), "NW");
+            assert_eq!(wind_direction_str(338), "N");
+        }
+
+        #[test]
+        fn test_full_rotation() {
+            assert_eq!(wind_direction_str(360), "N");
+            assert_eq!(wind_direction_str(359), "N");
+        }
+
+        #[test]
+        fn test_negative_degrees() {
+            // -90 degrees should be same as 270 degrees (West)
+            assert_eq!(wind_direction_str(-90), "W");
+            // -45 degrees should be same as 315 degrees (NW)
+            assert_eq!(wind_direction_str(-45), "NW");
+        }
+
+        #[test]
+        fn test_large_values() {
+            // 450 degrees = 90 degrees (East)
+            assert_eq!(wind_direction_str(450), "E");
+            // 720 degrees = 0 degrees (North)
+            assert_eq!(wind_direction_str(720), "N");
+        }
     }
 }

@@ -8,7 +8,7 @@ use ratatui::{
 
 use crate::config::UnitsConfig;
 use crate::models::CurrentWeather;
-use crate::ui::icons::{temperature_color, uv_info, wind_direction_str, WeatherCondition};
+use crate::ui::icons::{temperature_color_celsius, uv_info, wind_direction_str, WeatherCondition};
 
 pub fn render_current_weather(
     frame: &mut Frame,
@@ -67,13 +67,8 @@ fn render_icon_and_temp(
     let temp = units.temperature.convert(weather.temperature);
     let feels_like = units.temperature.convert(weather.apparent_temperature);
     
-    // temperature_color expects Fahrenheit, so convert if needed
-    let temp_f = if units.temperature == crate::config::TemperatureUnit::Fahrenheit {
-        temp
-    } else {
-        temp * 9.0 / 5.0 + 32.0
-    };
-    let temp_color = temperature_color(temp_f, true);
+    // Get color based on raw Celsius value
+    let temp_color = temperature_color_celsius(weather.temperature);
 
     let mut lines = Vec::new();
 

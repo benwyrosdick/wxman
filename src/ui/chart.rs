@@ -8,6 +8,7 @@ use ratatui::{
 
 use crate::config::UnitsConfig;
 use crate::models::HourlyForecast;
+use crate::ui::icons::temperature_color_celsius;
 use chrono::{Local, NaiveDateTime, Timelike};
 
 const CHART_HEIGHT: usize = 8;
@@ -116,14 +117,12 @@ pub fn render_today_chart(
             let rain_row = ((CHART_HEIGHT - 1) as f64 * (1.0 - rain_normalized)).round() as usize;
 
             // Determine what to draw at this position
-            // temp_to_color expects Fahrenheit, so always convert from Celsius
-            let temp_f = hour.temperature * 9.0 / 5.0 + 32.0;
             let (ch, color) = if row == temp_row && row == rain_row {
                 // Both temp and rain at same position
                 ('◆', if is_current { Color::White } else { Color::Yellow })
             } else if row == temp_row {
-                // Temperature point
-                let temp_color = temp_to_color(temp_f);
+                // Temperature point - use raw Celsius value
+                let temp_color = temperature_color_celsius(hour.temperature);
                 ('●', if is_current { Color::White } else { temp_color })
             } else if row == rain_row {
                 // Rain point
@@ -227,18 +226,6 @@ pub fn render_today_chart(
 
     let chart = Paragraph::new(lines);
     frame.render_widget(chart, inner);
-}
-
-fn temp_to_color(temp_f: f64) -> Color {
-    match temp_f as i32 {
-        ..=32 => Color::LightBlue,
-        33..=50 => Color::Cyan,
-        51..=65 => Color::Green,
-        66..=75 => Color::LightGreen,
-        76..=85 => Color::Yellow,
-        86..=95 => Color::Rgb(255, 165, 0),
-        _ => Color::Red,
-    }
 }
 
 fn rain_to_color(rain: i32) -> Color {

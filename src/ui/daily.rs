@@ -8,7 +8,7 @@ use ratatui::{
 
 use crate::config::UnitsConfig;
 use crate::models::DailyForecast;
-use crate::ui::icons::{temperature_color, uv_info, WeatherCondition};
+use crate::ui::icons::{temperature_color_celsius, uv_info, WeatherCondition};
 use chrono::NaiveDate;
 
 pub fn render_daily_forecast(
@@ -77,11 +77,9 @@ fn render_day_column(
     // Convert wind speed from km/h to user's preferred unit
     let wind_speed = units.wind_speed.convert(day.wind_speed_max);
     
-    // temperature_color expects Fahrenheit for color mapping
-    let temp_max_f = day.temp_max * 9.0 / 5.0 + 32.0;
-    let temp_min_f = day.temp_min * 9.0 / 5.0 + 32.0;
-    let high_color = temperature_color(temp_max_f, true);
-    let low_color = temperature_color(temp_min_f, true);
+    // Get colors based on raw Celsius values
+    let high_color = temperature_color_celsius(day.temp_max);
+    let low_color = temperature_color_celsius(day.temp_min);
 
     // Precipitation color
     let precip_color = match day.precipitation_probability {
