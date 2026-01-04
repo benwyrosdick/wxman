@@ -1,13 +1,14 @@
 use anyhow::{Context, Result};
-use crate::config::UnitsConfig;
 use crate::models::weather::{OpenMeteoResponse, WeatherData};
 
 const WEATHER_API_URL: &str = "https://api.open-meteo.com/v1/forecast";
 
+/// Fetches weather data from Open-Meteo API.
+/// Always requests metric units (Celsius, km/h, mm) so conversions can be done
+/// client-side for live unit switching without re-fetching.
 pub async fn fetch_weather(
     latitude: f64,
     longitude: f64,
-    units: &UnitsConfig,
 ) -> Result<WeatherData> {
     let client = reqwest::Client::new();
 
@@ -51,17 +52,16 @@ pub async fn fetch_weather(
     ]
     .join(",");
 
+    // Always request metric units: Celsius, km/h, mm
+    // Conversion to user's preferred units is done at display time
     let url = format!(
-        "{}?latitude={}&longitude={}&current={}&hourly={}&daily={}&temperature_unit={}&wind_speed_unit={}&precipitation_unit={}&timezone=auto&forecast_days=5",
+        "{}?latitude={}&longitude={}&current={}&hourly={}&daily={}&temperature_unit=celsius&wind_speed_unit=kmh&precipitation_unit=mm&timezone=auto&forecast_days=5",
         WEATHER_API_URL,
         latitude,
         longitude,
         current_params,
         hourly_params,
         daily_params,
-        units.temperature.api_value(),
-        units.wind_speed.api_value(),
-        units.precipitation.api_value(),
     );
 
     let response: OpenMeteoResponse = client

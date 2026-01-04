@@ -64,11 +64,10 @@ impl App {
         let location = self.get_location().await?;
         self.location = Some(location.clone());
 
-        // Fetch weather
+        // Fetch weather (always in metric units, conversion done at display time)
         let weather = api::fetch_weather(
             location.latitude,
             location.longitude,
-            &self.config.units,
         )
         .await?;
 
@@ -163,16 +162,15 @@ impl App {
         }
     }
 
-    pub fn close_units_menu(&mut self) -> bool {
+    pub fn close_units_menu(&mut self) {
         if self.show_units_menu {
             self.show_units_menu = false;
             if self.units_changed {
                 let _ = self.config.save();
                 self.units_changed = false;
-                return true; // Signal that we need to reload weather
+                // No need to reload weather - conversion is done at display time
             }
         }
-        false
     }
 
     pub fn scroll_hourly_up(&mut self) {

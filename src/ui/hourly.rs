@@ -47,8 +47,6 @@ pub fn render_hourly_forecast(
     // Calculate how many hours we can display (subtract 2 for header and separator)
     let available_height = inner.height as usize;
     let hours_to_show = available_height.saturating_sub(2);
-    
-    let is_fahrenheit = units.temperature == crate::config::TemperatureUnit::Fahrenheit;
 
     let mut lines = Vec::new();
 
@@ -122,7 +120,12 @@ pub fn render_hourly_forecast(
             .unwrap_or(true);
 
         let condition = WeatherCondition::from_wmo_code(hour.weather_code, is_day);
-        let temp_color = temperature_color(hour.temperature, is_fahrenheit);
+        
+        // Convert temperature from Celsius to user's preferred unit
+        let temp = units.temperature.convert(hour.temperature);
+        // temperature_color expects Fahrenheit for color mapping
+        let temp_f = hour.temperature * 9.0 / 5.0 + 32.0;
+        let temp_color = temperature_color(temp_f, true);
 
         // Color precipitation probability
         let precip_color = match hour.precipitation_probability {
@@ -177,7 +180,7 @@ pub fn render_hourly_forecast(
             Span::styled(format!("{:<10}", date_col), date_style),
             Span::styled(format!("{:>6}", time_str), time_style),
             Span::styled(
-                format!("{:>5}°", hour.temperature as i32),
+                format!("{:>5}°", temp as i32),
                 Style::default().fg(temp_color),
             ),
             Span::styled(

@@ -94,13 +94,8 @@ async fn run_app<B: ratatui::backend::Backend>(
                     if app.show_units_menu {
                         match key.code {
                             KeyCode::Esc | KeyCode::Char('u') | KeyCode::Char('q') => {
-                                if app.close_units_menu() {
-                                    // Units changed, reload weather
-                                    if let Err(e) = app.load_weather().await {
-                                        app.set_error(e.to_string());
-                                    }
-                                    last_refresh = Instant::now();
-                                }
+                                app.close_units_menu();
+                                // No reload needed - units are converted at display time
                             }
                             KeyCode::Up | KeyCode::Char('k') => {
                                 app.units_menu_up();

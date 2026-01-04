@@ -63,8 +63,17 @@ fn render_icon_and_temp(
     let icon = condition.icon();
     let icon_color = condition.color();
 
-    let is_fahrenheit = units.temperature == crate::config::TemperatureUnit::Fahrenheit;
-    let temp_color = temperature_color(weather.temperature, is_fahrenheit);
+    // Convert from metric (Celsius) to user's preferred unit
+    let temp = units.temperature.convert(weather.temperature);
+    let feels_like = units.temperature.convert(weather.apparent_temperature);
+    
+    // temperature_color expects Fahrenheit, so convert if needed
+    let temp_f = if units.temperature == crate::config::TemperatureUnit::Fahrenheit {
+        temp
+    } else {
+        temp * 9.0 / 5.0 + 32.0
+    };
+    let temp_color = temperature_color(temp_f, true);
 
     let mut lines = Vec::new();
 
@@ -79,7 +88,7 @@ fn render_icon_and_temp(
     // Add temperature
     lines.push(Line::from(""));
     lines.push(Line::from(Span::styled(
-        format!("{:.0}{}", weather.temperature, units.temperature.symbol()),
+        format!("{:.0}{}", temp, units.temperature.symbol()),
         Style::default()
             .fg(temp_color)
             .add_modifier(Modifier::BOLD),
@@ -89,7 +98,7 @@ fn render_icon_and_temp(
     lines.push(Line::from(Span::styled(
         format!(
             "Feels {:.0}{}",
-            weather.apparent_temperature,
+            feels_like,
             units.temperature.symbol()
         ),
         Style::default().fg(Color::Gray),
@@ -110,6 +119,11 @@ fn render_details(frame: &mut Frame, area: Rect, weather: &CurrentWeather, units
     let (uv_desc, uv_color) = uv_info(weather.uv_index);
     let wind_dir = wind_direction_str(weather.wind_direction);
 
+    // Convert from metric (km/h, mm) to user's preferred units
+    let wind_speed = units.wind_speed.convert(weather.wind_speed);
+    let wind_gusts = units.wind_speed.convert(weather.wind_gusts);
+    let precipitation = units.precipitation.convert(weather.precipitation);
+
     let lines = vec![
         Line::from(""),
         Line::from(vec![
@@ -125,7 +139,7 @@ fn render_details(frame: &mut Frame, area: Rect, weather: &CurrentWeather, units
             Span::styled(
                 format!(
                     "{:.0} {} {}",
-                    weather.wind_speed,
+                    wind_speed,
                     units.wind_speed.symbol(),
                     wind_dir
                 ),
@@ -135,7 +149,7 @@ fn render_details(frame: &mut Frame, area: Rect, weather: &CurrentWeather, units
         Line::from(vec![
             Span::styled("Gusts:       ", Style::default().fg(Color::DarkGray)),
             Span::styled(
-                format!("{:.0} {}", weather.wind_gusts, units.wind_speed.symbol()),
+                format!("{:.0} {}", wind_gusts, units.wind_speed.symbol()),
                 Style::default().fg(Color::LightGreen),
             ),
         ]),
@@ -167,7 +181,7 @@ fn render_details(frame: &mut Frame, area: Rect, weather: &CurrentWeather, units
         Line::from(vec![
             Span::styled("Precip:      ", Style::default().fg(Color::DarkGray)),
             Span::styled(
-                format!("{:.2} {}", weather.precipitation, units.precipitation.symbol()),
+                format!("{:.2} {}", precipitation, units.precipitation.symbol()),
                 Style::default().fg(Color::LightBlue),
             ),
         ]),

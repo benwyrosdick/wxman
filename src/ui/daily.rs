@@ -44,10 +44,8 @@ pub fn render_daily_forecast(
         .constraints(constraints)
         .split(inner);
 
-    let is_fahrenheit = units.temperature == crate::config::TemperatureUnit::Fahrenheit;
-
     for (i, day) in days.iter().enumerate() {
-        render_day_column(frame, chunks[i], day, units, is_fahrenheit, i == 0);
+        render_day_column(frame, chunks[i], day, units, i == 0);
     }
 }
 
@@ -56,7 +54,6 @@ fn render_day_column(
     area: Rect,
     day: &DailyForecast,
     units: &UnitsConfig,
-    is_fahrenheit: bool,
     is_today: bool,
 ) {
     let condition = WeatherCondition::from_wmo_code(day.weather_code, true);
@@ -73,9 +70,18 @@ fn render_day_column(
         day.date.clone()
     };
 
-    // Temperature colors
-    let high_color = temperature_color(day.temp_max, is_fahrenheit);
-    let low_color = temperature_color(day.temp_min, is_fahrenheit);
+    // Convert temperatures from Celsius to user's preferred unit
+    let temp_min = units.temperature.convert(day.temp_min);
+    let temp_max = units.temperature.convert(day.temp_max);
+    
+    // Convert wind speed from km/h to user's preferred unit
+    let wind_speed = units.wind_speed.convert(day.wind_speed_max);
+    
+    // temperature_color expects Fahrenheit for color mapping
+    let temp_max_f = day.temp_max * 9.0 / 5.0 + 32.0;
+    let temp_min_f = day.temp_min * 9.0 / 5.0 + 32.0;
+    let high_color = temperature_color(temp_max_f, true);
+    let low_color = temperature_color(temp_min_f, true);
 
     // Precipitation color
     let precip_color = match day.precipitation_probability {
@@ -116,19 +122,19 @@ fn render_day_column(
     // Low/High temperature
     let temp_line = format!(
         "{}° / {}°",
-        day.temp_min as i32,
-        day.temp_max as i32
+        temp_min as i32,
+        temp_max as i32
     );
     let padding = (area.width as usize).saturating_sub(temp_line.len()) / 2;
     lines.push(Line::from(vec![
         Span::raw(format!("{:>padding$}", "", padding = padding)),
         Span::styled(
-            format!("{}°", day.temp_min as i32),
+            format!("{}°", temp_min as i32),
             Style::default().fg(low_color),
         ),
         Span::styled(" / ", Style::default().fg(Color::DarkGray)),
         Span::styled(
-            format!("{}°", day.temp_max as i32),
+            format!("{}°", temp_max as i32),
             Style::default().fg(high_color).add_modifier(Modifier::BOLD),
         ),
     ]));
@@ -152,7 +158,7 @@ fn render_day_column(
     )));
 
     // Wind
-    let wind_str = format!("{:.0} {}", day.wind_speed_max, units.wind_speed.symbol());
+    let wind_str = format!("{:.0} {}", wind_speed, units.wind_speed.symbol());
     let padding = (area.width as usize).saturating_sub(wind_str.len()) / 2;
     lines.push(Line::from(Span::styled(
         format!("{:>padding$}{}", "", wind_str, padding = padding),

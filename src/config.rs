@@ -73,10 +73,11 @@ impl TemperatureUnit {
         }
     }
 
-    pub fn api_value(&self) -> &'static str {
+    /// Convert from Celsius (API base unit) to the selected unit
+    pub fn convert(&self, celsius: f64) -> f64 {
         match self {
-            Self::Fahrenheit => "fahrenheit",
-            Self::Celsius => "celsius",
+            Self::Celsius => celsius,
+            Self::Fahrenheit => celsius * 9.0 / 5.0 + 32.0,
         }
     }
 }
@@ -100,12 +101,13 @@ impl WindSpeedUnit {
         }
     }
 
-    pub fn api_value(&self) -> &'static str {
+    /// Convert from km/h (API base unit) to the selected unit
+    pub fn convert(&self, kmh: f64) -> f64 {
         match self {
-            Self::Mph => "mph",
-            Self::Kmh => "kmh",
-            Self::Ms => "ms",
-            Self::Knots => "kn",
+            Self::Kmh => kmh,
+            Self::Mph => kmh * 0.621371,
+            Self::Ms => kmh / 3.6,
+            Self::Knots => kmh * 0.539957,
         }
     }
 }
@@ -125,12 +127,14 @@ impl PrecipitationUnit {
         }
     }
 
-    pub fn api_value(&self) -> &'static str {
+    /// Convert from mm (API base unit) to the selected unit
+    pub fn convert(&self, mm: f64) -> f64 {
         match self {
-            Self::Inch => "inch",
-            Self::Mm => "mm",
+            Self::Mm => mm,
+            Self::Inch => mm / 25.4,
         }
     }
+
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]

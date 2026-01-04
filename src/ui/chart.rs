@@ -49,11 +49,15 @@ pub fn render_today_chart(
         return;
     }
 
-    // Find temperature range
+    // Find temperature range (in Celsius - raw API data)
     let temps: Vec<f64> = today_hours.iter().map(|h| h.temperature).collect();
-    let temp_min = temps.iter().cloned().fold(f64::INFINITY, f64::min);
-    let temp_max = temps.iter().cloned().fold(f64::NEG_INFINITY, f64::max);
-    let temp_range = (temp_max - temp_min).max(1.0);
+    let temp_min_c = temps.iter().cloned().fold(f64::INFINITY, f64::min);
+    let temp_max_c = temps.iter().cloned().fold(f64::NEG_INFINITY, f64::max);
+    let temp_range = (temp_max_c - temp_min_c).max(1.0);
+    
+    // Convert min/max to user's preferred unit for display labels
+    let temp_min_display = units.temperature.convert(temp_min_c);
+    let temp_max_display = units.temperature.convert(temp_max_c);
 
     // Calculate available width for the chart (leave room for labels)
     let label_width = 6; // "100% " or " 72° "
@@ -69,22 +73,20 @@ pub fn render_today_chart(
 
     // Build the chart
     let mut lines: Vec<Line> = Vec::new();
-
-    let is_fahrenheit = units.temperature == crate::config::TemperatureUnit::Fahrenheit;
     
     // Chart rows (from top to bottom: high temp to low temp)
     for row in 0..CHART_HEIGHT {
         let mut spans: Vec<Span> = Vec::new();
         
-        // Left label
+        // Left label (in user's preferred unit)
         if row == 0 {
             spans.push(Span::styled(
-                format!("{:>5}", temp_max as i32),
+                format!("{:>5}", temp_max_display as i32),
                 Style::default().fg(Color::DarkGray),
             ));
         } else if row == CHART_HEIGHT - 1 {
             spans.push(Span::styled(
-                format!("{:>5}", temp_min as i32),
+                format!("{:>5}", temp_min_display as i32),
                 Style::default().fg(Color::DarkGray),
             ));
         } else {
@@ -105,7 +107,8 @@ pub fn render_today_chart(
             let is_current = hour_num == current_hour;
 
             // Calculate temperature position (0 = bottom, CHART_HEIGHT-1 = top)
-            let temp_normalized = (hour.temperature - temp_min) / temp_range;
+            // Use raw Celsius values for consistent positioning
+            let temp_normalized = (hour.temperature - temp_min_c) / temp_range;
             let temp_row = ((CHART_HEIGHT - 1) as f64 * (1.0 - temp_normalized)).round() as usize;
 
             // Calculate rain position
@@ -113,16 +116,14 @@ pub fn render_today_chart(
             let rain_row = ((CHART_HEIGHT - 1) as f64 * (1.0 - rain_normalized)).round() as usize;
 
             // Determine what to draw at this position
+            // temp_to_color expects Fahrenheit, so always convert from Celsius
+            let temp_f = hour.temperature * 9.0 / 5.0 + 32.0;
             let (ch, color) = if row == temp_row && row == rain_row {
                 // Both temp and rain at same position
                 ('◆', if is_current { Color::White } else { Color::Yellow })
             } else if row == temp_row {
                 // Temperature point
-                let temp_color = if is_fahrenheit {
-                    temp_to_color(hour.temperature)
-                } else {
-                    temp_to_color(hour.temperature * 9.0 / 5.0 + 32.0)
-                };
+                let temp_color = temp_to_color(temp_f);
                 ('●', if is_current { Color::White } else { temp_color })
             } else if row == rain_row {
                 // Rain point
