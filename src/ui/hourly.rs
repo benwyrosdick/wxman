@@ -20,7 +20,11 @@ pub fn render_hourly_forecast(
 ) {
     let block = Block::default()
         .title(" Hourly Forecast ")
-        .title_style(Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD))
+        .title_style(
+            Style::default()
+                .fg(Color::Yellow)
+                .add_modifier(Modifier::BOLD),
+        )
         .borders(Borders::ALL)
         .border_style(Style::default().fg(Color::Yellow));
 
@@ -29,7 +33,7 @@ pub fn render_hourly_forecast(
 
     // Get current hour to filter past hours
     let now = Local::now();
-    
+
     // Filter to show only future hours (including current hour)
     let future_hours: Vec<&HourlyForecast> = hourly
         .iter()
@@ -51,27 +55,18 @@ pub fn render_hourly_forecast(
     let mut lines = Vec::new();
 
     // Add table header
+    let header_style = Style::default()
+        .fg(Color::Cyan)
+        .add_modifier(Modifier::BOLD);
     lines.push(Line::from(vec![
-        Span::styled(
-            format!("{:<10}", "Date"),
-            Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD),
-        ),
-        Span::styled(
-            format!("{:>6}", "Time"),
-            Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD),
-        ),
-        Span::styled(
-            format!("{:>6}", "Temp"),
-            Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD),
-        ),
-        Span::styled(
-            format!("{:>4}", ""),
-            Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD),
-        ),
-        Span::styled(
-            format!("{:>6}", "Rain"),
-            Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD),
-        ),
+        Span::styled(format!("{:<10}", "Date"), header_style),
+        Span::styled(format!("{:>6}", "Time"), header_style),
+        Span::styled(format!("{:>6}", "Temp"), header_style),
+        Span::styled(format!("{:>8}", "Feels"), header_style),
+        Span::styled(format!("{:>4}", ""), header_style),
+        Span::styled(format!("{:>8}", "Wind"), header_style),
+        Span::styled(format!("{:>12}", "Precip"), header_style),
+        // Span::styled(format!("{:>6}", ""), header_style),
     ]));
 
     // Add separator line
@@ -82,15 +77,18 @@ pub fn render_hourly_forecast(
 
     // Track the current date being displayed
     let mut last_date: Option<(i32, u32, u32)> = None;
-    
+
     // Determine if first visible row should show date
     if let Some(first_hour) = future_hours.get(scroll_offset) {
         if let Ok(dt) = NaiveDateTime::parse_from_str(&first_hour.time, "%Y-%m-%dT%H:%M") {
-            let local_dt: DateTime<Local> = Local.from_local_datetime(&dt).single().unwrap_or_else(Local::now);
+            let local_dt: DateTime<Local> = Local
+                .from_local_datetime(&dt)
+                .single()
+                .unwrap_or_else(Local::now);
             last_date = Some((local_dt.year(), local_dt.month(), local_dt.day()));
         }
     }
-    
+
     // Track if we've shown the date for the first visible row
     let mut first_row_date_shown = false;
 
@@ -102,8 +100,8 @@ pub fn render_hourly_forecast(
     {
         // Parse time
         let parsed_dt = NaiveDateTime::parse_from_str(&hour.time, "%Y-%m-%dT%H:%M").ok();
-        let local_dt: Option<DateTime<Local>> = parsed_dt
-            .and_then(|dt| Local.from_local_datetime(&dt).single());
+        let local_dt: Option<DateTime<Local>> =
+            parsed_dt.and_then(|dt| Local.from_local_datetime(&dt).single());
 
         let (time_str, is_midnight, current_date) = if let Some(ldt) = local_dt {
             let is_midnight = ldt.hour() == 0;
@@ -120,11 +118,15 @@ pub fn render_hourly_forecast(
             .unwrap_or(true);
 
         let condition = WeatherCondition::from_wmo_code(hour.weather_code, is_day);
-        
+
         // Convert temperature from Celsius to user's preferred unit
         let temp = units.temperature.convert(hour.temperature);
+        let feels_like = units.temperature.convert(hour.apparent_temperature);
         // Get color based on raw Celsius value
         let temp_color = temperature_color_celsius(hour.temperature);
+
+        // Convert wind speed from km/h to user's preferred unit
+        let wind_speed = units.wind_speed.convert(hour.wind_speed);
 
         // Color precipitation probability
         let precip_color = match hour.precipitation_probability {
@@ -132,6 +134,20 @@ pub fn render_hourly_forecast(
             21..=50 => Color::Yellow,
             51..=70 => Color::Rgb(255, 165, 0),
             _ => Color::Red,
+        };
+
+        // Convert precipitation amount from mm to user's preferred unit
+        let precip_amount = units.precipitation.convert(hour.precipitation);
+        let precip_str = format!("{:>3}%", hour.precipitation_probability);
+
+        let precip_amount_str = if hour.precipitation > 0.0 {
+            format!(
+                "{:>5.1} {}",
+                precip_amount,
+                units.precipitation.symbol()
+            )
+        } else {
+            "".to_string()
         };
 
         // Determine if we should show date in the date column
@@ -166,11 +182,15 @@ pub fn render_hourly_forecast(
             String::new()
         };
 
-        let date_style = Style::default().fg(Color::Magenta).add_modifier(Modifier::BOLD);
+        let date_style = Style::default()
+            .fg(Color::Magenta)
+            .add_modifier(Modifier::BOLD);
 
         // Highlight current hour (first row when not scrolled)
         let time_style = if i == 0 && scroll_offset == 0 {
-            Style::default().fg(Color::White).add_modifier(Modifier::BOLD)
+            Style::default()
+                .fg(Color::White)
+                .add_modifier(Modifier::BOLD)
         } else {
             Style::default().fg(Color::Gray)
         };
@@ -183,11 +203,23 @@ pub fn render_hourly_forecast(
                 Style::default().fg(temp_color),
             ),
             Span::styled(
+                format!("{:>5}°", feels_like as i32),
+                Style::default().fg(Color::Gray),
+            ),
+            Span::styled(
                 format!("  {} ", condition.small_icon()),
                 Style::default().fg(condition.color()),
             ),
             Span::styled(
-                format!("{:>4}%", hour.precipitation_probability),
+                format!("{:>7.0} {}", wind_speed, units.wind_speed.symbol()),
+                Style::default().fg(Color::LightGreen),
+            ),
+            Span::styled(
+                format!("{:>6}", precip_str),
+                Style::default().fg(precip_color),
+            ),
+            Span::styled(
+                format!("{:>6}", precip_amount_str),
                 Style::default().fg(precip_color),
             ),
         ]));
@@ -209,7 +241,7 @@ pub fn render_hourly_forecast(
 /// Get the maximum scroll offset for hourly forecast
 pub fn get_max_hourly_scroll(hourly: &[HourlyForecast], visible_height: usize) -> usize {
     let now = Local::now();
-    
+
     let future_count = hourly
         .iter()
         .filter(|h| {

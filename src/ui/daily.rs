@@ -9,7 +9,7 @@ use ratatui::{
 use crate::config::UnitsConfig;
 use crate::models::DailyForecast;
 use crate::ui::icons::{temperature_color_celsius, uv_info, WeatherCondition};
-use chrono::NaiveDate;
+use chrono::{NaiveDate, NaiveDateTime};
 
 pub fn render_daily_forecast(
     frame: &mut Frame,
@@ -19,7 +19,11 @@ pub fn render_daily_forecast(
 ) {
     let block = Block::default()
         .title(" 5-Day Forecast ")
-        .title_style(Style::default().fg(Color::Magenta).add_modifier(Modifier::BOLD))
+        .title_style(
+            Style::default()
+                .fg(Color::Magenta)
+                .add_modifier(Modifier::BOLD),
+        )
         .borders(Borders::ALL)
         .border_style(Style::default().fg(Color::Magenta));
 
@@ -28,7 +32,7 @@ pub fn render_daily_forecast(
 
     // Take only first 5 days
     let days: Vec<&DailyForecast> = daily.iter().take(5).collect();
-    
+
     if days.is_empty() {
         return;
     }
@@ -73,13 +77,23 @@ fn render_day_column(
     // Convert temperatures from Celsius to user's preferred unit
     let temp_min = units.temperature.convert(day.temp_min);
     let temp_max = units.temperature.convert(day.temp_max);
-    
+    let feels_min = units.temperature.convert(day.apparent_temp_min);
+    let feels_max = units.temperature.convert(day.apparent_temp_max);
+
     // Convert wind speed from km/h to user's preferred unit
     let wind_speed = units.wind_speed.convert(day.wind_speed_max);
-    
+
     // Get colors based on raw Celsius values
     let high_color = temperature_color_celsius(day.temp_max);
     let low_color = temperature_color_celsius(day.temp_min);
+
+    // Parse sunrise/sunset times
+    let sunrise_str = NaiveDateTime::parse_from_str(&day.sunrise, "%Y-%m-%dT%H:%M")
+        .map(|dt| dt.format("%l:%M%P").to_string().trim().to_string())
+        .unwrap_or_default();
+    let sunset_str = NaiveDateTime::parse_from_str(&day.sunset, "%Y-%m-%dT%H:%M")
+        .map(|dt| dt.format("%l:%M%P").to_string().trim().to_string())
+        .unwrap_or_default();
 
     // Precipitation color
     let precip_color = match day.precipitation_probability {
@@ -95,7 +109,9 @@ fn render_day_column(
 
     // Day header
     let header_style = if is_today {
-        Style::default().fg(Color::White).add_modifier(Modifier::BOLD)
+        Style::default()
+            .fg(Color::White)
+            .add_modifier(Modifier::BOLD)
     } else {
         Style::default().fg(Color::Gray)
     };
@@ -118,11 +134,7 @@ fn render_day_column(
     lines.push(Line::from(""));
 
     // Low/High temperature
-    let temp_line = format!(
-        "{}° / {}°",
-        temp_min as i32,
-        temp_max as i32
-    );
+    let temp_line = format!("{}° / {}°", temp_min as i32, temp_max as i32);
     let padding = (area.width as usize).saturating_sub(temp_line.len()) / 2;
     lines.push(Line::from(vec![
         Span::raw(format!("{:>padding$}", "", padding = padding)),
@@ -137,10 +149,28 @@ fn render_day_column(
         ),
     ]));
 
+    // Feels like temperature range
+    let feels_str = format!("Feels {}°/{}°", feels_min as i32, feels_max as i32);
+    let padding = (area.width as usize).saturating_sub(feels_str.len()) / 2;
+    lines.push(Line::from(Span::styled(
+        format!("{:>padding$}{}", "", feels_str, padding = padding),
+        Style::default().fg(Color::DarkGray),
+    )));
+
     lines.push(Line::from(""));
 
-    // Precipitation probability
-    let precip_str = format!("{}% rain", day.precipitation_probability);
+    // Precipitation probability and amount
+    let precip_amount = units.precipitation.convert(day.precipitation_sum);
+    let precip_str = if day.precipitation_sum > 0.0 {
+        format!(
+            "{}% ({:.1}{})",
+            day.precipitation_probability,
+            precip_amount,
+            units.precipitation.symbol()
+        )
+    } else {
+        format!("{}% rain", day.precipitation_probability)
+    };
     let padding = (area.width as usize).saturating_sub(precip_str.len()) / 2;
     lines.push(Line::from(Span::styled(
         format!("{:>padding$}{}", "", precip_str, padding = padding),
@@ -161,6 +191,14 @@ fn render_day_column(
     lines.push(Line::from(Span::styled(
         format!("{:>padding$}{}", "", wind_str, padding = padding),
         Style::default().fg(Color::LightGreen),
+    )));
+
+    // Sunrise/Sunset
+    let sun_str = format!("☀{} ☽{}", sunrise_str, sunset_str);
+    let padding = (area.width as usize).saturating_sub(sun_str.len()) / 2;
+    lines.push(Line::from(Span::styled(
+        format!("{:>padding$}{}", "", sun_str, padding = padding),
+        Style::default().fg(Color::Yellow),
     )));
 
     let paragraph = Paragraph::new(lines);

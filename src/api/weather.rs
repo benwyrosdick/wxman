@@ -32,6 +32,7 @@ pub async fn fetch_weather(
         "temperature_2m",
         "apparent_temperature",
         "precipitation_probability",
+        "precipitation",
         "weather_code",
         "wind_speed_10m",
     ]

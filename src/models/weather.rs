@@ -25,18 +25,17 @@ pub struct CurrentWeather {
 }
 
 #[derive(Debug, Clone)]
-#[allow(dead_code)]
 pub struct HourlyForecast {
     pub time: String,
     pub temperature: f64,
     pub apparent_temperature: f64,
     pub precipitation_probability: i32,
+    pub precipitation: f64,
     pub weather_code: i32,
     pub wind_speed: f64,
 }
 
 #[derive(Debug, Clone)]
-#[allow(dead_code)]
 pub struct DailyForecast {
     pub date: String,
     pub weather_code: i32,
@@ -82,6 +81,7 @@ pub struct OpenMeteoHourly {
     pub temperature_2m: Vec<f64>,
     pub apparent_temperature: Vec<f64>,
     pub precipitation_probability: Vec<i32>,
+    pub precipitation: Vec<f64>,
     pub weather_code: Vec<i32>,
     pub wind_speed_10m: Vec<f64>,
 }
@@ -129,6 +129,7 @@ impl From<OpenMeteoResponse> for WeatherData {
                 temperature: resp.hourly.temperature_2m[i],
                 apparent_temperature: resp.hourly.apparent_temperature[i],
                 precipitation_probability: resp.hourly.precipitation_probability[i],
+                precipitation: resp.hourly.precipitation[i],
                 weather_code: resp.hourly.weather_code[i],
                 wind_speed: resp.hourly.wind_speed_10m[i],
             })
@@ -192,6 +193,7 @@ mod tests {
                 temperature_2m: vec![18.0, 17.5, 17.0],
                 apparent_temperature: vec![16.0, 15.5, 15.0],
                 precipitation_probability: vec![10, 20, 30],
+                precipitation: vec![0.0, 0.5, 1.2],
                 weather_code: vec![0, 1, 2],
                 wind_speed_10m: vec![10.0, 12.0, 14.0],
             },
@@ -202,8 +204,14 @@ mod tests {
                 temperature_2m_min: vec![15.0, 12.0],
                 apparent_temperature_max: vec![21.0, 19.0],
                 apparent_temperature_min: vec![14.0, 11.0],
-                sunrise: vec!["2024-01-01T07:00".to_string(), "2024-01-02T07:01".to_string()],
-                sunset: vec!["2024-01-01T17:00".to_string(), "2024-01-02T17:01".to_string()],
+                sunrise: vec![
+                    "2024-01-01T07:00".to_string(),
+                    "2024-01-02T07:01".to_string(),
+                ],
+                sunset: vec![
+                    "2024-01-01T17:00".to_string(),
+                    "2024-01-02T17:01".to_string(),
+                ],
                 precipitation_sum: vec![0.0, 5.5],
                 precipitation_probability_max: vec![10, 80],
                 wind_speed_10m_max: vec![20.0, 35.0],
@@ -234,7 +242,7 @@ mod tests {
     #[test]
     fn test_is_day_conversion() {
         let mut response = create_test_response();
-        
+
         // Test is_day = 1 (true)
         response.current.is_day = 1;
         let weather_data: WeatherData = response.clone().into();
@@ -258,6 +266,7 @@ mod tests {
         assert_eq!(first_hour.temperature, 18.0);
         assert_eq!(first_hour.apparent_temperature, 16.0);
         assert_eq!(first_hour.precipitation_probability, 10);
+        assert_eq!(first_hour.precipitation, 0.0);
         assert_eq!(first_hour.weather_code, 0);
         assert_eq!(first_hour.wind_speed, 10.0);
 
@@ -265,6 +274,7 @@ mod tests {
         assert_eq!(last_hour.time, "2024-01-01T02:00");
         assert_eq!(last_hour.temperature, 17.0);
         assert_eq!(last_hour.precipitation_probability, 30);
+        assert_eq!(last_hour.precipitation, 1.2);
     }
 
     #[test]
@@ -303,6 +313,7 @@ mod tests {
                 temperature_2m: vec![],
                 apparent_temperature: vec![],
                 precipitation_probability: vec![],
+                precipitation: vec![],
                 weather_code: vec![],
                 wind_speed_10m: vec![],
             },
