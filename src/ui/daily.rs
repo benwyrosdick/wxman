@@ -194,8 +194,8 @@ fn render_day_column(
     )));
 
     // Sunrise/Sunset
-    let sun_str = format!("☀{} ☽{}", sunrise_str, sunset_str);
-    let padding = (area.width as usize).saturating_sub(sun_str.len()) / 2;
+    let sun_str = format!("☀️{} 🌙{}", sunrise_str, sunset_str);
+    let padding = (area.width as usize).saturating_sub(sun_str.len()) / 2 + 2;
     lines.push(Line::from(Span::styled(
         format!("{:>padding$}{}", "", sun_str, padding = padding),
         Style::default().fg(Color::Yellow),

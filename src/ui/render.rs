@@ -94,7 +94,7 @@ fn render_main_content(frame: &mut Frame, area: Rect, app: &App) {
                     .direction(Direction::Vertical)
                     .constraints([
                         Constraint::Min(20),     // Top: Current + Chart + Hourly
-                        Constraint::Length(16),  // Bottom: 5-Day forecast (full width)
+                        Constraint::Length(17),  // Bottom: 5-Day forecast (full width)
                     ])
                     .split(area);
 
