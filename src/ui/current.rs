@@ -18,7 +18,11 @@ pub fn render_current_weather(
 ) {
     let block = Block::default()
         .title(" Current Conditions ")
-        .title_style(Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD))
+        .title_style(
+            Style::default()
+                .fg(Color::Cyan)
+                .add_modifier(Modifier::BOLD),
+        )
         .borders(Borders::ALL)
         .border_style(Style::default().fg(Color::Cyan));
 
@@ -66,7 +70,7 @@ fn render_icon_and_temp(
     // Convert from metric (Celsius) to user's preferred unit
     let temp = units.temperature.convert(weather.temperature);
     let feels_like = units.temperature.convert(weather.apparent_temperature);
-    
+
     // Get color based on raw Celsius value
     let temp_color = temperature_color_celsius(weather.temperature);
 
@@ -84,18 +88,12 @@ fn render_icon_and_temp(
     lines.push(Line::from(""));
     lines.push(Line::from(Span::styled(
         format!("{:.0}{}", temp, units.temperature.symbol()),
-        Style::default()
-            .fg(temp_color)
-            .add_modifier(Modifier::BOLD),
+        Style::default().fg(temp_color).add_modifier(Modifier::BOLD),
     )));
 
     // Add feels like
     lines.push(Line::from(Span::styled(
-        format!(
-            "Feels {:.0}{}",
-            feels_like,
-            units.temperature.symbol()
-        ),
+        format!("Feels {:.0}{}", feels_like, units.temperature.symbol()),
         Style::default().fg(Color::Gray),
     )));
 
@@ -152,7 +150,11 @@ fn render_details(frame: &mut Frame, area: Rect, weather: &CurrentWeather, units
         Line::from(vec![
             Span::styled("Pressure:    ", Style::default().fg(Color::DarkGray)),
             Span::styled(
-                format!("{} {}", units.pressure.format(weather.pressure), units.pressure.symbol()),
+                format!(
+                    "{} {}",
+                    units.pressure.format(weather.pressure),
+                    units.pressure.symbol()
+                ),
                 Style::default().fg(Color::LightMagenta),
             ),
         ]),

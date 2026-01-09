@@ -19,9 +19,9 @@ pub fn render(frame: &mut Frame, app: &App) {
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
-            Constraint::Length(3),  // Header
-            Constraint::Min(10),    // Main content
-            Constraint::Length(1),  // Footer
+            Constraint::Length(3), // Header
+            Constraint::Min(10),   // Main content
+            Constraint::Length(1), // Footer
         ])
         .split(size);
 
@@ -65,10 +65,7 @@ fn render_header(frame: &mut Frame, area: Rect, app: &App) {
                 .add_modifier(Modifier::BOLD),
         ),
         Span::raw(" "),
-        Span::styled(
-            last_updated,
-            Style::default().fg(Color::DarkGray),
-        ),
+        Span::styled(last_updated, Style::default().fg(Color::DarkGray)),
     ]))
     .block(
         Block::default()
@@ -93,8 +90,8 @@ fn render_main_content(frame: &mut Frame, area: Rect, app: &App) {
                 let main_rows = Layout::default()
                     .direction(Direction::Vertical)
                     .constraints([
-                        Constraint::Min(20),     // Top: Current + Chart + Hourly
-                        Constraint::Length(17),  // Bottom: 5-Day forecast (full width)
+                        Constraint::Min(20),    // Top: Current + Chart + Hourly
+                        Constraint::Length(17), // Bottom: 5-Day forecast (full width)
                     ])
                     .split(area);
 
@@ -111,14 +108,14 @@ fn render_main_content(frame: &mut Frame, area: Rect, app: &App) {
                 let left_chunks = Layout::default()
                     .direction(Direction::Vertical)
                     .constraints([
-                        Constraint::Min(15),     // Current conditions (fills remaining space)
-                        Constraint::Length(12),  // Today's chart (fixed height)
+                        Constraint::Min(15),    // Current conditions (fills remaining space)
+                        Constraint::Length(12), // Today's chart (fixed height)
                     ])
                     .split(top_columns[0]);
 
                 render_current_weather(frame, left_chunks[0], &weather.current, &app.config.units);
                 render_today_chart(frame, left_chunks[1], &weather.hourly, &app.config.units);
-                
+
                 // Hourly takes the full right column of top section
                 render_hourly_forecast(
                     frame,
@@ -157,9 +154,7 @@ fn render_error(frame: &mut Frame, area: Rect, message: &str) {
         Line::from(""),
         Line::from(Span::styled(
             "Error",
-            Style::default()
-                .fg(Color::Red)
-                .add_modifier(Modifier::BOLD),
+            Style::default().fg(Color::Red).add_modifier(Modifier::BOLD),
         )),
         Line::from(""),
         Line::from(Span::styled(message, Style::default().fg(Color::Red))),
@@ -169,7 +164,11 @@ fn render_error(frame: &mut Frame, area: Rect, message: &str) {
             Style::default().fg(Color::Yellow),
         )),
     ])
-    .block(Block::default().borders(Borders::ALL).border_style(Style::default().fg(Color::Red)))
+    .block(
+        Block::default()
+            .borders(Borders::ALL)
+            .border_style(Style::default().fg(Color::Red)),
+    )
     .alignment(ratatui::layout::Alignment::Center);
 
     frame.render_widget(error, area);
@@ -249,7 +248,11 @@ fn render_help_overlay(frame: &mut Frame, area: Rect) {
     let help = Paragraph::new(help_text).block(
         Block::default()
             .title(" Help ")
-            .title_style(Style::default().fg(Color::Green).add_modifier(Modifier::BOLD))
+            .title_style(
+                Style::default()
+                    .fg(Color::Green)
+                    .add_modifier(Modifier::BOLD),
+            )
             .borders(Borders::ALL)
             .border_style(Style::default().fg(Color::Green)),
     );
@@ -275,12 +278,16 @@ fn render_units_menu(frame: &mut Frame, area: Rect, app: &App) {
     let make_row = |label: &str, value: &str, is_selected: bool| -> Line {
         let prefix = if is_selected { " > " } else { "   " };
         let style = if is_selected {
-            Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD)
+            Style::default()
+                .fg(Color::Yellow)
+                .add_modifier(Modifier::BOLD)
         } else {
             Style::default().fg(Color::White)
         };
         let value_style = if is_selected {
-            Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)
+            Style::default()
+                .fg(Color::Cyan)
+                .add_modifier(Modifier::BOLD)
         } else {
             Style::default().fg(Color::Gray)
         };
@@ -304,13 +311,29 @@ fn render_units_menu(frame: &mut Frame, area: Rect, app: &App) {
             Style::default().fg(Color::DarkGray),
         )),
         Line::from(""),
-        make_row("Temperature", temp_value, selected == UnitMenuField::Temperature),
+        make_row(
+            "Temperature",
+            temp_value,
+            selected == UnitMenuField::Temperature,
+        ),
         Line::from(""),
-        make_row("Wind Speed", wind_value, selected == UnitMenuField::WindSpeed),
+        make_row(
+            "Wind Speed",
+            wind_value,
+            selected == UnitMenuField::WindSpeed,
+        ),
         Line::from(""),
-        make_row("Precipitation", precip_value, selected == UnitMenuField::Precipitation),
+        make_row(
+            "Precipitation",
+            precip_value,
+            selected == UnitMenuField::Precipitation,
+        ),
         Line::from(""),
-        make_row("Pressure", pressure_value, selected == UnitMenuField::Pressure),
+        make_row(
+            "Pressure",
+            pressure_value,
+            selected == UnitMenuField::Pressure,
+        ),
         Line::from(""),
         Line::from(Span::styled(
             "  Press u or Esc to close and apply",
@@ -321,7 +344,11 @@ fn render_units_menu(frame: &mut Frame, area: Rect, app: &App) {
     let menu = Paragraph::new(menu_text).block(
         Block::default()
             .title(" Units ")
-            .title_style(Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD))
+            .title_style(
+                Style::default()
+                    .fg(Color::Yellow)
+                    .add_modifier(Modifier::BOLD),
+            )
             .borders(Borders::ALL)
             .border_style(Style::default().fg(Color::Yellow)),
     );
@@ -356,14 +383,17 @@ fn render_location_input(frame: &mut Frame, area: Rect, app: &App) {
             Span::styled(current_location, Style::default().fg(Color::White)),
         ]),
         Line::from(""),
-        Line::from(vec![
-            Span::styled("  Enter city or zip code:", Style::default().fg(Color::Gray)),
-        ]),
+        Line::from(vec![Span::styled(
+            "  Enter city or zip code:",
+            Style::default().fg(Color::Gray),
+        )]),
         Line::from(vec![
             Span::raw("  "),
             Span::styled(
                 input_display,
-                Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD),
+                Style::default()
+                    .fg(Color::Cyan)
+                    .add_modifier(Modifier::BOLD),
             ),
         ]),
     ];
@@ -392,7 +422,11 @@ fn render_location_input(frame: &mut Frame, area: Rect, app: &App) {
     let input = Paragraph::new(lines).block(
         Block::default()
             .title(" Set Location ")
-            .title_style(Style::default().fg(Color::Green).add_modifier(Modifier::BOLD))
+            .title_style(
+                Style::default()
+                    .fg(Color::Green)
+                    .add_modifier(Modifier::BOLD),
+            )
             .borders(Borders::ALL)
             .border_style(Style::default().fg(Color::Green)),
     );

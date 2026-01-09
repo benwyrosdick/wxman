@@ -21,7 +21,11 @@ pub fn render_today_chart(
 ) {
     let block = Block::default()
         .title(" Today's Forecast ")
-        .title_style(Style::default().fg(Color::Green).add_modifier(Modifier::BOLD))
+        .title_style(
+            Style::default()
+                .fg(Color::Green)
+                .add_modifier(Modifier::BOLD),
+        )
         .borders(Borders::ALL)
         .border_style(Style::default().fg(Color::Green));
 
@@ -55,7 +59,7 @@ pub fn render_today_chart(
     let temp_min_c = temps.iter().cloned().fold(f64::INFINITY, f64::min);
     let temp_max_c = temps.iter().cloned().fold(f64::NEG_INFINITY, f64::max);
     let temp_range = (temp_max_c - temp_min_c).max(1.0);
-    
+
     // Convert min/max to user's preferred unit for display labels
     let temp_min_display = units.temperature.convert(temp_min_c);
     let temp_max_display = units.temperature.convert(temp_max_c);
@@ -63,7 +67,7 @@ pub fn render_today_chart(
     // Calculate available width for the chart (leave room for labels)
     let label_width = 6; // "100% " or " 72° "
     let chart_width = (inner.width as usize).saturating_sub(label_width);
-    
+
     if chart_width == 0 || today_hours.is_empty() {
         return;
     }
@@ -74,11 +78,11 @@ pub fn render_today_chart(
 
     // Build the chart
     let mut lines: Vec<Line> = Vec::new();
-    
+
     // Chart rows (from top to bottom: high temp to low temp)
     for row in 0..CHART_HEIGHT {
         let mut spans: Vec<Span> = Vec::new();
-        
+
         // Left label (in user's preferred unit)
         if row == 0 {
             spans.push(Span::styled(
@@ -93,18 +97,19 @@ pub fn render_today_chart(
         } else {
             spans.push(Span::raw("     "));
         }
-        
+
         // Separator
         spans.push(Span::styled("│", Style::default().fg(Color::DarkGray)));
 
         // Chart content - draw each hour with proper spacing
         for (i, hour) in today_hours.iter().enumerate() {
-            let hour_num = if let Ok(dt) = NaiveDateTime::parse_from_str(&hour.time, "%Y-%m-%dT%H:%M") {
-                dt.hour()
-            } else {
-                0
-            };
-            
+            let hour_num =
+                if let Ok(dt) = NaiveDateTime::parse_from_str(&hour.time, "%Y-%m-%dT%H:%M") {
+                    dt.hour()
+                } else {
+                    0
+                };
+
             let is_current = hour_num == current_hour;
 
             // Calculate temperature position (0 = bottom, CHART_HEIGHT-1 = top)
@@ -119,7 +124,14 @@ pub fn render_today_chart(
             // Determine what to draw at this position
             let (ch, color) = if row == temp_row && row == rain_row {
                 // Both temp and rain at same position
-                ('◆', if is_current { Color::White } else { Color::Yellow })
+                (
+                    '◆',
+                    if is_current {
+                        Color::White
+                    } else {
+                        Color::Yellow
+                    },
+                )
             } else if row == temp_row {
                 // Temperature point - use raw Celsius value
                 let temp_color = temperature_color_celsius(hour.temperature);
@@ -141,7 +153,7 @@ pub fn render_today_chart(
             // Draw the character centered in its slot
             let padding_before = (chars_per_hour - 1) / 2;
             let padding_after = chars_per_hour - 1 - padding_before;
-            
+
             if padding_before > 0 {
                 spans.push(Span::raw(" ".repeat(padding_before)));
             }
@@ -158,19 +170,19 @@ pub fn render_today_chart(
     let mut hour_spans: Vec<Span> = Vec::new();
     hour_spans.push(Span::raw("     ")); // Label spacer
     hour_spans.push(Span::styled("└", Style::default().fg(Color::DarkGray)));
-    
+
     for (i, hour) in today_hours.iter().enumerate() {
         let hour_num = if let Ok(dt) = NaiveDateTime::parse_from_str(&hour.time, "%Y-%m-%dT%H:%M") {
             dt.hour()
         } else {
             0
         };
-        
+
         let is_current = hour_num == current_hour;
-        
+
         // Show hour label at key hours or current
         let show_label = hour_num % 6 == 0 || is_current;
-        
+
         let label_char = if show_label {
             if hour_num == 0 {
                 "0"
@@ -188,23 +200,31 @@ pub fn render_today_chart(
         };
 
         let style = if is_current {
-            Style::default().fg(Color::White).add_modifier(Modifier::BOLD)
+            Style::default()
+                .fg(Color::White)
+                .add_modifier(Modifier::BOLD)
         } else if show_label {
             Style::default().fg(Color::Gray)
         } else {
             Style::default().fg(Color::DarkGray)
         };
-        
+
         // Center label in slot
         let padding_before = (chars_per_hour - 1) / 2;
         let padding_after = chars_per_hour - 1 - padding_before;
-        
+
         if padding_before > 0 {
-            hour_spans.push(Span::styled("─".repeat(padding_before), Style::default().fg(Color::DarkGray)));
+            hour_spans.push(Span::styled(
+                "─".repeat(padding_before),
+                Style::default().fg(Color::DarkGray),
+            ));
         }
         hour_spans.push(Span::styled(label_char.to_string(), style));
         if padding_after > 0 && i < total_hours - 1 {
-            hour_spans.push(Span::styled("─".repeat(padding_after), Style::default().fg(Color::DarkGray)));
+            hour_spans.push(Span::styled(
+                "─".repeat(padding_after),
+                Style::default().fg(Color::DarkGray),
+            ));
         }
     }
     lines.push(Line::from(hour_spans));

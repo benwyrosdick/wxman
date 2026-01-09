@@ -58,6 +58,23 @@ fn default_pressure() -> PressureUnit {
     PressureUnit::InHg
 }
 
+impl PrecipitationUnit {
+    pub fn symbol(&self) -> &'static str {
+        match self {
+            Self::Inch => "in",
+            Self::Cm => "cm",
+        }
+    }
+
+    /// Convert from mm (API base unit) to the selected unit
+    pub fn convert(&self, mm: f64) -> f64 {
+        match self {
+            Self::Cm => mm / 10.0,
+            Self::Inch => mm / 25.4,
+        }
+    }
+}
+
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "lowercase")]
 pub enum TemperatureUnit {
@@ -112,29 +129,30 @@ impl WindSpeedUnit {
     }
 }
 
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Copy, Serialize, PartialEq)]
 #[serde(rename_all = "lowercase")]
 pub enum PrecipitationUnit {
     Inch,
-    Mm,
+    Cm,
 }
 
-impl PrecipitationUnit {
-    pub fn symbol(&self) -> &'static str {
-        match self {
-            Self::Inch => "in",
-            Self::Mm => "mm",
+impl<'de> Deserialize<'de> for PrecipitationUnit {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let s = String::deserialize(deserializer)?;
+        match s.to_lowercase().as_str() {
+            "inch" | "in" => Ok(PrecipitationUnit::Inch),
+            "cm" | "centimeter" | "centimeters" => Ok(PrecipitationUnit::Cm),
+            // Backward compatibility: treat mm as cm (since we're changing the unit)
+            "mm" | "millimeter" | "millimeters" => Ok(PrecipitationUnit::Cm),
+            _ => Err(serde::de::Error::custom(format!(
+                "invalid precipitation unit: {}. Expected 'inch', 'cm', or 'mm' (treated as cm)",
+                s
+            ))),
         }
     }
-
-    /// Convert from mm (API base unit) to the selected unit
-    pub fn convert(&self, mm: f64) -> f64 {
-        match self {
-            Self::Mm => mm,
-            Self::Inch => mm / 25.4,
-        }
-    }
-
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
@@ -182,34 +200,34 @@ impl Config {
 
     pub fn load() -> Result<Self> {
         let path = Self::config_path()?;
-        
+
         if !path.exists() {
             return Ok(Self::default());
         }
 
         let content = fs::read_to_string(&path)
             .with_context(|| format!("Failed to read config file: {}", path.display()))?;
-        
-        let config: Config = toml::from_str(&content)
-            .with_context(|| "Failed to parse config file")?;
-        
+
+        let config: Config =
+            toml::from_str(&content).with_context(|| "Failed to parse config file")?;
+
         Ok(config)
     }
 
     pub fn save(&self) -> Result<()> {
         let path = Self::config_path()?;
-        
+
         if let Some(parent) = path.parent() {
-            fs::create_dir_all(parent)
-                .with_context(|| format!("Failed to create config directory: {}", parent.display()))?;
+            fs::create_dir_all(parent).with_context(|| {
+                format!("Failed to create config directory: {}", parent.display())
+            })?;
         }
 
-        let content = toml::to_string_pretty(self)
-            .context("Failed to serialize config")?;
-        
+        let content = toml::to_string_pretty(self).context("Failed to serialize config")?;
+
         fs::write(&path, content)
             .with_context(|| format!("Failed to write config file: {}", path.display()))?;
-        
+
         Ok(())
     }
 }
@@ -299,9 +317,12 @@ mod tests {
         use super::*;
 
         #[test]
-        fn test_mm_to_mm() {
-            let unit = PrecipitationUnit::Mm;
-            assert_eq!(unit.convert(25.4), 25.4);
+        fn test_mm_to_cm() {
+            let unit = PrecipitationUnit::Cm;
+            // 10 mm = 1 cm
+            assert_eq!(unit.convert(10.0), 1.0);
+            // 25.4 mm = 2.54 cm
+            assert!((unit.convert(25.4) - 2.54).abs() < 0.001);
             assert_eq!(unit.convert(0.0), 0.0);
         }
 
@@ -316,7 +337,7 @@ mod tests {
 
         #[test]
         fn test_symbol() {
-            assert_eq!(PrecipitationUnit::Mm.symbol(), "mm");
+            assert_eq!(PrecipitationUnit::Cm.symbol(), "cm");
             assert_eq!(PrecipitationUnit::Inch.symbol(), "in");
         }
     }
@@ -365,11 +386,11 @@ mod tests {
         use super::*;
 
         #[test]
-        fn test_default_units_are_imperial() {
+        fn test_default_units() {
             let units = UnitsConfig::default();
             assert_eq!(units.temperature, TemperatureUnit::Fahrenheit);
             assert_eq!(units.wind_speed, WindSpeedUnit::Mph);
-            assert_eq!(units.precipitation, PrecipitationUnit::Inch);
+            assert_eq!(units.precipitation, PrecipitationUnit::Cm);
             assert_eq!(units.pressure, PressureUnit::InHg);
         }
     }
@@ -408,7 +429,7 @@ mod tests {
                 [units]
                 temperature = "celsius"
                 wind_speed = "kmh"
-                precipitation = "mm"
+                precipitation = "cm"
                 pressure = "hpa"
             "#;
             let config: Config = toml::from_str(toml_str).unwrap();
@@ -416,7 +437,7 @@ mod tests {
             assert_eq!(config.location.city, Some("New York".to_string()));
             assert_eq!(config.units.temperature, TemperatureUnit::Celsius);
             assert_eq!(config.units.wind_speed, WindSpeedUnit::Kmh);
-            assert_eq!(config.units.precipitation, PrecipitationUnit::Mm);
+            assert_eq!(config.units.precipitation, PrecipitationUnit::Cm);
             assert_eq!(config.units.pressure, PressureUnit::Hpa);
         }
 
@@ -432,13 +453,24 @@ mod tests {
                 units: UnitsConfig {
                     temperature: TemperatureUnit::Celsius,
                     wind_speed: WindSpeedUnit::Ms,
-                    precipitation: PrecipitationUnit::Mm,
+                    precipitation: PrecipitationUnit::Cm,
                     pressure: PressureUnit::Hpa,
                 },
             };
             let toml_str = toml::to_string(&config).unwrap();
             assert!(toml_str.contains("zipcode = \"90210\""));
             assert!(toml_str.contains("temperature = \"celsius\""));
+        }
+
+        #[test]
+        fn test_backward_compatibility_mm_to_cm() {
+            let toml_str = r#"
+                [units]
+                precipitation = "mm"
+            "#;
+            let config: Config = toml::from_str(toml_str).unwrap();
+            // "mm" should be converted to "cm" for backward compatibility
+            assert_eq!(config.units.precipitation, PrecipitationUnit::Cm);
         }
     }
 }

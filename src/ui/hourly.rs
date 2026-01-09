@@ -141,11 +141,7 @@ pub fn render_hourly_forecast(
         let precip_str = format!("{:>3}%", hour.precipitation_probability);
 
         let precip_amount_str = if hour.precipitation > 0.0 {
-            format!(
-                "{:>5.1} {}",
-                precip_amount,
-                units.precipitation.symbol()
-            )
+            format!("{:>6.2} {}", precip_amount, units.precipitation.symbol())
         } else {
             "".to_string()
         };

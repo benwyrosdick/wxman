@@ -103,7 +103,10 @@ async fn run_app<B: ratatui::backend::Backend>(
                             KeyCode::Down | KeyCode::Char('j') => {
                                 app.units_menu_down();
                             }
-                            KeyCode::Enter | KeyCode::Char(' ') | KeyCode::Left | KeyCode::Right => {
+                            KeyCode::Enter
+                            | KeyCode::Char(' ')
+                            | KeyCode::Left
+                            | KeyCode::Right => {
                                 app.units_menu_toggle_selected();
                             }
                             _ => {}

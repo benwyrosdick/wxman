@@ -65,11 +65,7 @@ impl App {
         self.location = Some(location.clone());
 
         // Fetch weather (always in metric units, conversion done at display time)
-        let weather = api::fetch_weather(
-            location.latitude,
-            location.longitude,
-        )
-        .await?;
+        let weather = api::fetch_weather(location.latitude, location.longitude).await?;
 
         self.weather = Some(weather);
         self.last_updated = Some(Local::now());
@@ -93,7 +89,12 @@ impl App {
             return Ok(Location {
                 latitude: lat,
                 longitude: lon,
-                city: self.config.location.city.clone().unwrap_or_else(|| "Unknown".to_string()),
+                city: self
+                    .config
+                    .location
+                    .city
+                    .clone()
+                    .unwrap_or_else(|| "Unknown".to_string()),
                 region: None,
                 country: "".to_string(),
                 timezone: "auto".to_string(),
@@ -149,8 +150,8 @@ impl App {
             }
             UnitMenuField::Precipitation => {
                 self.config.units.precipitation = match self.config.units.precipitation {
-                    PrecipitationUnit::Inch => PrecipitationUnit::Mm,
-                    PrecipitationUnit::Mm => PrecipitationUnit::Inch,
+                    PrecipitationUnit::Inch => PrecipitationUnit::Cm,
+                    PrecipitationUnit::Cm => PrecipitationUnit::Inch,
                 };
             }
             UnitMenuField::Pressure => {
@@ -221,7 +222,7 @@ impl App {
 
     pub async fn submit_location(&mut self) -> Result<bool> {
         let input = self.location_input.trim().to_string();
-        
+
         if input.is_empty() {
             // Clear zipcode, use IP geolocation
             self.config.location.zipcode = None;

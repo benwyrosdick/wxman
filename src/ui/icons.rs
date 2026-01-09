@@ -211,13 +211,13 @@ pub fn temperature_color_celsius(temp_c: f64) -> Color {
 /// Get color for temperature display based on Fahrenheit value
 pub fn temperature_color_fahrenheit(temp_f: f64) -> Color {
     match temp_f as i32 {
-        ..=32 => Color::LightBlue,      // Freezing
-        33..=50 => Color::Cyan,         // Cold
-        51..=65 => Color::Green,        // Cool
-        66..=75 => Color::LightGreen,   // Comfortable
-        76..=85 => Color::Yellow,       // Warm
+        ..=32 => Color::LightBlue,          // Freezing
+        33..=50 => Color::Cyan,             // Cold
+        51..=65 => Color::Green,            // Cool
+        66..=75 => Color::LightGreen,       // Comfortable
+        76..=85 => Color::Yellow,           // Warm
         86..=95 => Color::Rgb(255, 165, 0), // Hot (Orange)
-        _ => Color::Red,                // Very hot
+        _ => Color::Red,                    // Very hot
     }
 }
 

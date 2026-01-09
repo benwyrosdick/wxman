@@ -1,13 +1,16 @@
-use anyhow::{anyhow, Context, Result};
 use crate::models::location::{GeocodingResponse, Location};
+use anyhow::{anyhow, Context, Result};
 
 const GEOCODING_API_URL: &str = "https://geocoding-api.open-meteo.com/v1/search";
 
 pub async fn lookup_zipcode(zipcode: &str) -> Result<Location> {
     let client = reqwest::Client::new();
-    
-    let url = format!("{}?name={}&count=1&language=en&format=json", GEOCODING_API_URL, zipcode);
-    
+
+    let url = format!(
+        "{}?name={}&count=1&language=en&format=json",
+        GEOCODING_API_URL, zipcode
+    );
+
     let response: GeocodingResponse = client
         .get(&url)
         .send()
