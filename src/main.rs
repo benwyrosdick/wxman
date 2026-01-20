@@ -4,6 +4,7 @@ mod config;
 mod models;
 mod ui;
 
+use std::env;
 use std::io;
 use std::time::Duration;
 
@@ -21,9 +22,15 @@ use config::Config;
 
 const REFRESH_INTERVAL: Duration = Duration::from_secs(15 * 60); // 15 minutes
 const TICK_RATE: Duration = Duration::from_millis(250);
+const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 #[tokio::main]
 async fn main() -> Result<()> {
+    if env::args().any(|arg| arg == "--version" || arg == "-V") {
+        println!("wxman {VERSION}");
+        return Ok(());
+    }
+
     // Load configuration
     let config = Config::load().unwrap_or_else(|e| {
         eprintln!("Warning: Failed to load config: {}. Using defaults.", e);

@@ -16,6 +16,12 @@ A terminal-based weather application built with Rust and [Ratatui](https://ratat
 
 ## Installation
 
+### Homebrew (macOS/Linux)
+
+```bash
+brew install benwyrosdick/tap/wxman
+```
+
 ### From Source
 
 Requires [Rust](https://rustup.rs/) 1.70 or later.
