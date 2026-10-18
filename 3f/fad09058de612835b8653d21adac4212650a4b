@@ -1,0 +1,47 @@
+src/ui/render.rs
+  s_daa7ea35c69639::t_b821f95b274a17 429-441
+  s_daa7ea35c69639::t_bb6ff544fccad3 199-208,210-211,269,359,442
+Cargo.toml
+  s_daa7ea35c69639::t_e8dad451ec0def 11,14
+src/api/geolocation.rs
+  s_daa7ea35c69639::t_13036580db64f8 6,12-13
+src/app.rs
+  s_daa7ea35c69639::t_dd395e9fc2cfd6 24,42,44,68-69,71,83,107,111-114,172-175,241
+src/api/mod.rs
+  s_daa7ea35c69639::t_ba8444a33559d7 8-16
+src/api/weather.rs
+  s_daa7ea35c69639::t_36fa8c835e7fdf 9-13,56-68,72-73,78
+README.md
+  s_daa7ea35c69639::t_29a0b553a35619 27,31,80,89-90,108,112-117
+  s_daa7ea35c69639::t_7aff661b3b9922 118-119
+.github/workflows/ci.yml
+  s_daa7ea35c69639::t_1a51c638de92ea 1-20
+src/models/weather.rs
+  s_daa7ea35c69639::t_8cd2b0fa401070 279,301,306,313,336,375,399
+  s_daa7ea35c69639::t_b40911ed1038a6 105-141,194,198,206-222
+  s_daa7ea35c69639::t_95bb1a23ddec6f 223
+src/config.rs
+  s_daa7ea35c69639::t_cd7e6f126ced9b 22-23,376,389-391
+  s_daa7ea35c69639::t_df512b12911e17 185-197
+src/api/geocoding.rs
+  s_daa7ea35c69639::t_985aeb13241c20 6,8-12,14,18-19,28
+  s_daa7ea35c69639::t_6fcd4a4e82c642 13
+src/main.rs
+  s_daa7ea35c69639::t_5635acb5d4edf7 11-12,35-41,43-48,55-56,72
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "3ffad09058de612835b8653d21adac4212650a4b",
+  "prompts": {},
+  "sessions": {
+    "s_daa7ea35c69639": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a14cde-3a20-726b-ab14-83353ee83ae3",
+        "model": "gpt-6-astra"
+      },
+      "human_author": "Ben Wyrosdick <ben.wyrosdick@gmail.com>"
+    }
+  }
+}
