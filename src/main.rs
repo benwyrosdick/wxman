@@ -5,16 +5,11 @@ mod models;
 mod ui;
 
 use std::env;
-use std::io;
 use std::time::Duration;
 
 use anyhow::Result;
-use crossterm::{
-    event::{self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode, KeyEventKind},
-    execute,
-    terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
-};
-use ratatui::{backend::CrosstermBackend, Terminal};
+use crossterm::event::{self, Event, KeyCode, KeyEventKind};
+use ratatui::Terminal;
 use tokio::time::Instant;
 
 use app::App;
@@ -37,39 +32,28 @@ async fn main() -> Result<()> {
         Config::default()
     });
 
-    // Setup terminal
-    enable_raw_mode()?;
-    let mut stdout = io::stdout();
-    execute!(stdout, EnterAlternateScreen, EnableMouseCapture)?;
-    let backend = CrosstermBackend::new(stdout);
-    let mut terminal = Terminal::new(backend)?;
+    let mut app = App::new(config, api::client()?);
 
-    // Create app
-    let mut app = App::new(config);
+    // Ratatui installs a panic hook; the guard also restores on early returns.
+    let _terminal_guard = TerminalGuard;
+    let mut terminal = ratatui::try_init()?;
+    run_app(&mut terminal, &mut app).await
+}
 
-    // Run the app
-    let result = run_app(&mut terminal, &mut app).await;
+struct TerminalGuard;
 
-    // Restore terminal
-    disable_raw_mode()?;
-    execute!(
-        terminal.backend_mut(),
-        LeaveAlternateScreen,
-        DisableMouseCapture
-    )?;
-    terminal.show_cursor()?;
-
-    if let Err(e) = result {
-        eprintln!("Error: {}", e);
+impl Drop for TerminalGuard {
+    fn drop(&mut self) {
+        ratatui::restore();
     }
-
-    Ok(())
 }
 
 async fn run_app<B: ratatui::backend::Backend>(
     terminal: &mut Terminal<B>,
     app: &mut App,
 ) -> Result<()> {
+    terminal.draw(|frame| ui::render(frame, app))?;
+
     // Initial weather load
     if let Err(e) = app.load_weather().await {
         app.set_error(e.to_string());
@@ -85,7 +69,7 @@ async fn run_app<B: ratatui::backend::Backend>(
         // Handle events with timeout
         let timeout = TICK_RATE
             .checked_sub(last_tick.elapsed())
-            .unwrap_or_else(|| Duration::from_secs(0));
+            .unwrap_or_default();
 
         if event::poll(timeout)? {
             if let Event::Key(key) = event::read()? {

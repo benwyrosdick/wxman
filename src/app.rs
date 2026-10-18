@@ -21,6 +21,7 @@ pub enum UnitMenuField {
 }
 
 pub struct App {
+    client: reqwest::Client,
     pub config: Config,
     pub state: AppState,
     pub location: Option<Location>,
@@ -38,8 +39,9 @@ pub struct App {
 }
 
 impl App {
-    pub fn new(config: Config) -> Self {
+    pub fn new(config: Config, client: reqwest::Client) -> Self {
         Self {
+            client,
             config,
             state: AppState::Loading,
             location: None,
@@ -62,11 +64,11 @@ impl App {
 
         // Get location
         let location = self.get_location().await?;
-        self.location = Some(location.clone());
-
         // Fetch weather (always in metric units, conversion done at display time)
-        let weather = api::fetch_weather(location.latitude, location.longitude).await?;
+        let weather =
+            api::fetch_weather(&self.client, location.latitude, location.longitude).await?;
 
+        self.location = Some(location);
         self.weather = Some(weather);
         self.last_updated = Some(Local::now());
         self.hourly_scroll = 0;
@@ -78,7 +80,7 @@ impl App {
     async fn get_location(&self) -> Result<Location> {
         // Check if zipcode is configured
         if let Some(zipcode) = &self.config.location.zipcode {
-            return api::lookup_zipcode(zipcode).await;
+            return api::lookup_zipcode(&self.client, zipcode).await;
         }
 
         // Check if coordinates are configured
@@ -102,14 +104,14 @@ impl App {
         }
 
         // Fall back to IP geolocation
-        api::get_location_from_ip().await
+        api::get_location_from_ip(&self.client).await
     }
 
     pub fn toggle_units_menu(&mut self) {
-        self.show_units_menu = !self.show_units_menu;
-        if !self.show_units_menu && self.units_changed {
-            // Save config when closing menu if units changed
-            let _ = self.config.save();
+        if self.show_units_menu {
+            self.close_units_menu();
+        } else {
+            self.show_units_menu = true;
         }
     }
 
@@ -167,9 +169,10 @@ impl App {
         if self.show_units_menu {
             self.show_units_menu = false;
             if self.units_changed {
-                let _ = self.config.save();
-                self.units_changed = false;
-                // No need to reload weather - conversion is done at display time
+                match self.config.save() {
+                    Ok(()) => self.units_changed = false,
+                    Err(error) => self.set_error(format!("Failed to save units: {error:#}")),
+                }
             }
         }
     }
@@ -235,7 +238,7 @@ impl App {
         }
 
         // Try to look up the location
-        match api::lookup_zipcode(&input).await {
+        match api::lookup_zipcode(&self.client, &input).await {
             Ok(location) => {
                 // Save to config
                 self.config.location.zipcode = Some(input);

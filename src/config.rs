@@ -19,15 +19,12 @@ pub struct LocationConfig {
     pub city: Option<String>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(default)]
 pub struct UnitsConfig {
-    #[serde(default = "default_temperature")]
     pub temperature: TemperatureUnit,
-    #[serde(default = "default_wind_speed")]
     pub wind_speed: WindSpeedUnit,
-    #[serde(default = "default_precipitation")]
     pub precipitation: PrecipitationUnit,
-    #[serde(default = "default_pressure")]
     pub pressure: PressureUnit,
 }
 
@@ -40,22 +37,6 @@ impl Default for UnitsConfig {
             pressure: PressureUnit::InHg,
         }
     }
-}
-
-fn default_temperature() -> TemperatureUnit {
-    TemperatureUnit::Fahrenheit
-}
-
-fn default_wind_speed() -> WindSpeedUnit {
-    WindSpeedUnit::Mph
-}
-
-fn default_precipitation() -> PrecipitationUnit {
-    PrecipitationUnit::Inch
-}
-
-fn default_pressure() -> PressureUnit {
-    PressureUnit::InHg
 }
 
 impl PrecipitationUnit {
@@ -201,17 +182,19 @@ impl Config {
     pub fn load() -> Result<Self> {
         let path = Self::config_path()?;
 
-        if !path.exists() {
-            return Ok(Self::default());
-        }
+        let content = match fs::read_to_string(&path) {
+            Ok(content) => content,
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
+                return Ok(Self::default());
+            }
+            Err(error) => {
+                return Err(error)
+                    .with_context(|| format!("Failed to read config file: {}", path.display()));
+            }
+        };
 
-        let content = fs::read_to_string(&path)
-            .with_context(|| format!("Failed to read config file: {}", path.display()))?;
-
-        let config: Config =
-            toml::from_str(&content).with_context(|| "Failed to parse config file")?;
-
-        Ok(config)
+        toml::from_str(&content)
+            .with_context(|| format!("Failed to parse config file: {}", path.display()))
     }
 
     pub fn save(&self) -> Result<()> {
@@ -390,7 +373,7 @@ mod tests {
             let units = UnitsConfig::default();
             assert_eq!(units.temperature, TemperatureUnit::Fahrenheit);
             assert_eq!(units.wind_speed, WindSpeedUnit::Mph);
-            assert_eq!(units.precipitation, PrecipitationUnit::Cm);
+            assert_eq!(units.precipitation, PrecipitationUnit::Inch);
             assert_eq!(units.pressure, PressureUnit::InHg);
         }
     }
@@ -403,6 +386,9 @@ mod tests {
             let config: Config = toml::from_str("").unwrap();
             assert_eq!(config.units.temperature, TemperatureUnit::Fahrenheit);
             assert!(config.location.zipcode.is_none());
+            assert_eq!(config.units, UnitsConfig::default());
+            let config: Config = toml::from_str("[units]").unwrap();
+            assert_eq!(config.units, UnitsConfig::default());
         }
 
         #[test]

@@ -24,11 +24,11 @@ brew install benwyrosdick/tap/wxman
 
 ### From Source
 
-Requires [Rust](https://rustup.rs/) 1.70 or later.
+Requires a current stable [Rust](https://rustup.rs/) toolchain.
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/wxman.git
+git clone https://github.com/benwyrosdick/wxman.git
 cd wxman
 
 # Build and install
@@ -77,7 +77,7 @@ Press `u` to open the units configuration menu:
 
 - **Temperature**: °F or °C
 - **Wind Speed**: mph, km/h, m/s, or knots
-- **Precipitation**: in or mm
+- **Precipitation**: in or cm
 - **Pressure**: inHg or hPa
 
 Use `↑`/`↓` to navigate, `Enter` or `Space` to toggle, and `u` or `Esc` to close and apply.
@@ -86,7 +86,8 @@ Use `↑`/`↓` to navigate, `Enter` or `Space` to toggle, and `u` or `Esc` to c
 
 wxman stores its configuration at:
 
-- **Linux/macOS**: `~/.config/wxman/config.toml`
+- **Linux**: `$XDG_CONFIG_HOME/wxman/config.toml` (defaults to `~/.config/wxman/config.toml`)
+- **macOS**: `~/Library/Application Support/wxman/config.toml`
 - **Windows**: `%APPDATA%\wxman\config.toml`
 
 ### Example Configuration
@@ -104,8 +105,16 @@ wxman stores its configuration at:
 [units]
 temperature = "fahrenheit"  # or "celsius"
 wind_speed = "mph"          # or "kmh", "ms", "knots"
-precipitation = "inch"      # or "mm"
+precipitation = "inch"      # or "cm" (legacy "mm" is accepted as "cm")
 pressure = "inhg"           # or "hpa"
+```
+
+## Development
+
+```bash
+cargo fmt --check
+cargo clippy --all-targets -- -D warnings
+cargo test
 ```
 
 ## Data Sources

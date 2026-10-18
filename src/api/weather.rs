@@ -6,9 +6,11 @@ const WEATHER_API_URL: &str = "https://api.open-meteo.com/v1/forecast";
 /// Fetches weather data from Open-Meteo API.
 /// Always requests metric units (Celsius, km/h, mm) so conversions can be done
 /// client-side for live unit switching without re-fetching.
-pub async fn fetch_weather(latitude: f64, longitude: f64) -> Result<WeatherData> {
-    let client = reqwest::Client::new();
-
+pub async fn fetch_weather(
+    client: &reqwest::Client,
+    latitude: f64,
+    longitude: f64,
+) -> Result<WeatherData> {
     let current_params = [
         "temperature_2m",
         "relative_humidity_2m",
@@ -50,26 +52,28 @@ pub async fn fetch_weather(latitude: f64, longitude: f64) -> Result<WeatherData>
     ]
     .join(",");
 
-    // Always request metric units: Celsius, km/h, mm
-    // Conversion to user's preferred units is done at display time
-    let url = format!(
-        "{}?latitude={}&longitude={}&current={}&hourly={}&daily={}&temperature_unit=celsius&wind_speed_unit=kmh&precipitation_unit=mm&timezone=auto&forecast_days=5",
-        WEATHER_API_URL,
-        latitude,
-        longitude,
-        current_params,
-        hourly_params,
-        daily_params,
-    );
-
     let response: OpenMeteoResponse = client
-        .get(&url)
+        .get(WEATHER_API_URL)
+        .query(&[
+            ("latitude", latitude.to_string()),
+            ("longitude", longitude.to_string()),
+            ("current", current_params),
+            ("hourly", hourly_params),
+            ("daily", daily_params),
+            ("temperature_unit", "celsius".into()),
+            ("wind_speed_unit", "kmh".into()),
+            ("precipitation_unit", "mm".into()),
+            ("timezone", "auto".into()),
+            ("forecast_days", "5".into()),
+        ])
         .send()
         .await
         .context("Failed to fetch weather data")?
+        .error_for_status()
+        .context("Weather service returned an error")?
         .json()
         .await
         .context("Failed to parse weather response")?;
 
-    Ok(response.into())
+    response.try_into()
 }

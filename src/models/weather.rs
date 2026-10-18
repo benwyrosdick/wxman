@@ -102,8 +102,43 @@ pub struct OpenMeteoDaily {
     pub uv_index_max: Vec<f64>,
 }
 
-impl From<OpenMeteoResponse> for WeatherData {
-    fn from(resp: OpenMeteoResponse) -> Self {
+impl TryFrom<OpenMeteoResponse> for WeatherData {
+    type Error = anyhow::Error;
+
+    fn try_from(resp: OpenMeteoResponse) -> Result<Self, Self::Error> {
+        let hourly = &resp.hourly;
+        anyhow::ensure!(
+            [
+                hourly.temperature_2m.len(),
+                hourly.apparent_temperature.len(),
+                hourly.precipitation_probability.len(),
+                hourly.precipitation.len(),
+                hourly.weather_code.len(),
+                hourly.wind_speed_10m.len()
+            ]
+            .iter()
+            .all(|&len| len == hourly.time.len()),
+            "Hourly forecast arrays have inconsistent lengths"
+        );
+        let daily = &resp.daily;
+        anyhow::ensure!(
+            [
+                daily.weather_code.len(),
+                daily.temperature_2m_max.len(),
+                daily.temperature_2m_min.len(),
+                daily.apparent_temperature_max.len(),
+                daily.apparent_temperature_min.len(),
+                daily.sunrise.len(),
+                daily.sunset.len(),
+                daily.precipitation_sum.len(),
+                daily.precipitation_probability_max.len(),
+                daily.wind_speed_10m_max.len(),
+                daily.uv_index_max.len()
+            ]
+            .iter()
+            .all(|&len| len == daily.time.len()),
+            "Daily forecast arrays have inconsistent lengths"
+        );
         let current = CurrentWeather {
             temperature: resp.current.temperature_2m,
             apparent_temperature: resp.current.apparent_temperature,
@@ -156,17 +191,35 @@ impl From<OpenMeteoResponse> for WeatherData {
             })
             .collect();
 
-        Self {
+        Ok(Self {
             current,
             hourly,
             daily,
-        }
+        })
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    // Keep fixtures concise while exercising the fallible conversion.
+    impl OpenMeteoResponse {
+        fn into_weather(self) -> WeatherData {
+            self.try_into().unwrap()
+        }
+    }
+
+    #[test]
+    fn rejects_mismatched_forecast_arrays() {
+        let mut response = create_test_response();
+        response.hourly.temperature_2m.pop();
+        assert!(WeatherData::try_from(response).is_err());
+
+        let mut response = create_test_response();
+        response.daily.sunset.push("extra".into());
+        assert!(WeatherData::try_from(response).is_err());
+    }
 
     fn create_test_response() -> OpenMeteoResponse {
         OpenMeteoResponse {
@@ -223,7 +276,7 @@ mod tests {
     #[test]
     fn test_current_weather_conversion() {
         let response = create_test_response();
-        let weather_data: WeatherData = response.into();
+        let weather_data = response.into_weather();
 
         assert_eq!(weather_data.current.temperature, 20.5);
         assert_eq!(weather_data.current.humidity, 65);
@@ -245,19 +298,19 @@ mod tests {
 
         // Test is_day = 1 (true)
         response.current.is_day = 1;
-        let weather_data: WeatherData = response.clone().into();
+        let weather_data = response.clone().into_weather();
         assert!(weather_data.current.is_day);
 
         // Test is_day = 0 (false)
         response.current.is_day = 0;
-        let weather_data: WeatherData = response.into();
+        let weather_data = response.into_weather();
         assert!(!weather_data.current.is_day);
     }
 
     #[test]
     fn test_hourly_forecast_conversion() {
         let response = create_test_response();
-        let weather_data: WeatherData = response.into();
+        let weather_data = response.into_weather();
 
         assert_eq!(weather_data.hourly.len(), 3);
 
@@ -280,7 +333,7 @@ mod tests {
     #[test]
     fn test_daily_forecast_conversion() {
         let response = create_test_response();
-        let weather_data: WeatherData = response.into();
+        let weather_data = response.into_weather();
 
         assert_eq!(weather_data.daily.len(), 2);
 
@@ -319,7 +372,7 @@ mod tests {
             },
             daily: create_test_response().daily,
         };
-        let weather_data: WeatherData = response.into();
+        let weather_data = response.into_weather();
         assert!(weather_data.hourly.is_empty());
     }
 
@@ -343,7 +396,7 @@ mod tests {
                 uv_index_max: vec![],
             },
         };
-        let weather_data: WeatherData = response.into();
+        let weather_data = response.into_weather();
         assert!(weather_data.daily.is_empty());
     }
 }

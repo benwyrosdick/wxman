@@ -196,14 +196,19 @@ fn render_footer(frame: &mut Frame, area: Rect, app: &App) {
     frame.render_widget(footer, area);
 }
 
-fn render_help_overlay(frame: &mut Frame, area: Rect) {
-    // Center the help box
-    let popup_width = 50;
-    let popup_height = 16;
-    let popup_x = (area.width.saturating_sub(popup_width)) / 2;
-    let popup_y = (area.height.saturating_sub(popup_height)) / 2;
+fn centered_popup(area: Rect, width: u16, height: u16) -> Rect {
+    let width = width.min(area.width);
+    let height = height.min(area.height);
+    Rect::new(
+        area.x + (area.width - width) / 2,
+        area.y + (area.height - height) / 2,
+        width,
+        height,
+    )
+}
 
-    let popup_area = Rect::new(popup_x, popup_y, popup_width, popup_height);
+fn render_help_overlay(frame: &mut Frame, area: Rect) {
+    let popup_area = centered_popup(area, 50, 16);
 
     // Clear the area behind the popup
     frame.render_widget(Clear, popup_area);
@@ -261,13 +266,7 @@ fn render_help_overlay(frame: &mut Frame, area: Rect) {
 }
 
 fn render_units_menu(frame: &mut Frame, area: Rect, app: &App) {
-    // Center the menu box
-    let popup_width = 45;
-    let popup_height = 14;
-    let popup_x = (area.width.saturating_sub(popup_width)) / 2;
-    let popup_y = (area.height.saturating_sub(popup_height)) / 2;
-
-    let popup_area = Rect::new(popup_x, popup_y, popup_width, popup_height);
+    let popup_area = centered_popup(area, 45, 15);
 
     // Clear the area behind the popup
     frame.render_widget(Clear, popup_area);
@@ -357,13 +356,7 @@ fn render_units_menu(frame: &mut Frame, area: Rect, app: &App) {
 }
 
 fn render_location_input(frame: &mut Frame, area: Rect, app: &App) {
-    // Center the input box
-    let popup_width = 50;
-    let popup_height = 10;
-    let popup_x = (area.width.saturating_sub(popup_width)) / 2;
-    let popup_y = (area.height.saturating_sub(popup_height)) / 2;
-
-    let popup_area = Rect::new(popup_x, popup_y, popup_width, popup_height);
+    let popup_area = centered_popup(area, 50, 11);
 
     // Clear the area behind the popup
     frame.render_widget(Clear, popup_area);
@@ -432,4 +425,18 @@ fn render_location_input(frame: &mut Frame, area: Rect, app: &App) {
     );
 
     frame.render_widget(input, popup_area);
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn popups_stay_inside_their_area() {
+        let area = Rect::new(10, 20, 80, 24);
+        assert_eq!(centered_popup(area, 50, 16), Rect::new(25, 24, 50, 16));
+        let small = Rect::new(5, 7, 10, 3);
+        assert_eq!(centered_popup(small, 50, 16), small);
+        assert_eq!(centered_popup(Rect::default(), 50, 16), Rect::default());
+    }
 }
